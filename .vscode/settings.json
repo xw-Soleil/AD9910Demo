@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.scs": "spectre",
+        "ad9910.h": "c",
+        "main.h": "c"
+    }
+}
