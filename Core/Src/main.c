@@ -91,17 +91,11 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-   
-  printf("AD9910 AWG Test Program Started...\r\n");
+  printf("AD9910 Integrated Demo Started...\r\n");
 
-  // 1. 初始化AD9910芯片
+  // 1. 初始化AD9910芯片 (默认进入DDS模式)
   Init_AD9910();
   printf("AD9910 Initialized.\r\n");
-
-  // 2. 设置并启动SINC波形播放
-  printf("Setting and starting SINC wave playback...\r\n");
-  AD9910_RAM_WAVE_Set(TRIG_WAVE);
-  printf("AWG mode is running.\r\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -111,6 +105,28 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    /* --- 演示AWG任意波形模式 --- */
+    printf("\n--- Entering AWG Mode with SINC wave ---\r\n");
+    Init_AD9910();
+    // 步骤 1: 启动AWG模式，此函数会完成波形写入和模式切换
+    AD9910_AWG_Start(SINC_WAVE);
+
+    AD9910_AWG_Update_Freq_Phase(24400, 180);
+    HAL_Delay(500);
+
+
+     /* --- 演示DDS正弦波模式 --- */
+    printf("\n--- Entering DDS Sine Wave Mode ---\r\n");
+    printf("Setting 10MHz at 100%% amplitude...\r\n");
+    AD9910_Set_Sine_Wave(10000000, 16383); // 输出10MHz满幅正弦波
+    HAL_Delay(500); // 持续5秒
+
+    printf("Setting 20MHz at 25%% amplitude...\r\n");
+    AD9910_Set_Sine_Wave(20000000, 4095); // 输出20MHz 1/4幅度正弦波
+    HAL_Delay(500); // 持续5秒
+
+
+    
 
   }
   /* USER CODE END 3 */
