@@ -97,9 +97,8 @@ int main(void)
   // 步骤 3: 初始化AD9910
   Init_ad9910();
   printf("AD9910 Initialized.\r\n");
-
-  // 步骤 3: 设置一个初始的固定频率, 例如 10MHz (10,000,000 Hz)
-  Freq_convert(100000);
+  // Freq_Amp_convert(10000000, 16383);
+  Freq_Amp_convert(1000000, 1638);
   printf("Frequency set to 10 MHz.\r\n");
   /* USER CODE END 2 */
 
