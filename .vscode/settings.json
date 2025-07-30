@@ -2,6 +2,8 @@
     "files.associations": {
         "*.scs": "spectre",
         "ad9910.h": "c",
-        "main.h": "c"
+        "main.h": "c",
+        "AD9910.H": "cpp",
+        "AD9910V1.C": "cpp"
     }
 }

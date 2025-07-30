@@ -91,15 +91,17 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  // 打印一条消息到串口/SWV，确认程序已开始运行 (可选)
-  printf("AD9910 Test Program Started...\r\n");
+   
+  printf("AD9910 AWG Test Program Started...\r\n");
 
-  // 步骤 3: 初始化AD9910
-  Init_ad9910();
+  // 1. 初始化AD9910芯片
+  Init_AD9910();
   printf("AD9910 Initialized.\r\n");
-  // Freq_Amp_convert(10000000, 16383);
-  Freq_Amp_convert(1000000, 1638);
-  printf("Frequency set to 10 MHz.\r\n");
+
+  // 2. 设置并启动SINC波形播放
+  printf("Setting and starting SINC wave playback...\r\n");
+  AD9910_RAM_WAVE_Set(TRIG_WAVE);
+  printf("AWG mode is running.\r\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -109,6 +111,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
   }
   /* USER CODE END 3 */
 }
