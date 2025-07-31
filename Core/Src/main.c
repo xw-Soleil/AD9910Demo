@@ -31,6 +31,7 @@
 #include "utils.h"
 #include "VppFFTMeu.h"
 #include "sample.h"
+#include "hmi.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -63,13 +64,6 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-//======================================================================================
-// 宏定义和常量
-//======================================================================================
-#define FFT_SIZE            ADC_DMA_BUFFER_SIZE
-#define SAMPLING_RATE       1000000.0f
-#define SIGNAL_AMPLITUDE    2.0f
-#define SIGNAL_FREQUENCY    (100.5f * (SAMPLING_RATE / FFT_SIZE))
 
 //======================================================================================
 // 全局变量
@@ -120,6 +114,8 @@ int main(void)
   MX_UART4_Init();
   MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
+  VisualTFT_Init(); // 初始化串口屏
+  Init_AD9910(); // 初始化AD9910
 
   printf("\r\n--- 精确FFT幅值测量程序 (模块化版本) ---\r\n");
 
@@ -143,12 +139,14 @@ int main(void)
       while(1);
   }
   Init_AD9910();
+  AD9910_Set_Sine_Wave(100000, 16383 * 3.3f / MAX_DDS_VPP); // 设置正弦波频率为100kHz，幅度为16383（对应3.3V）
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    VisualTFT_Poll();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

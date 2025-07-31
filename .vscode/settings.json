@@ -6,6 +6,9 @@
         "AD9910.H": "cpp",
         "AD9910V1.C": "cpp",
         "sample.h": "c",
-        "vppfftmeu.h": "c"
+        "vppfftmeu.h": "c",
+        "screen.h": "c",
+        "process.h": "c",
+        "arm_math.h": "c"
     }
 }

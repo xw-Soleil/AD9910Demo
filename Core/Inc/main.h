@@ -80,6 +80,14 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
 
+//======================================================================================
+// 宏定义和常量
+//======================================================================================
+#define FFT_SIZE            ADC_DMA_BUFFER_SIZE
+#define SAMPLING_RATE       1000000.0f
+#define SIGNAL_AMPLITUDE    2.0f
+#define SIGNAL_FREQUENCY    (100.5f * (SAMPLING_RATE / FFT_SIZE))
+#define MAX_DDS_VPP        4.5f
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
