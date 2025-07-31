@@ -4,6 +4,8 @@
         "ad9910.h": "c",
         "main.h": "c",
         "AD9910.H": "cpp",
-        "AD9910V1.C": "cpp"
+        "AD9910V1.C": "cpp",
+        "sample.h": "c",
+        "vppfftmeu.h": "c"
     }
 }

@@ -18,6 +18,9 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
+#include "dma.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -26,6 +29,8 @@
 #include "AD9910.h"
 #include <stdio.h> // For printf, if using semihosting or similar for debugging
 #include "utils.h"
+#include "VppFFTMeu.h"
+#include "sample.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -58,6 +63,25 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+//======================================================================================
+// 宏定义和常量
+//======================================================================================
+#define FFT_SIZE            ADC_DMA_BUFFER_SIZE
+#define SAMPLING_RATE       1000000.0f
+#define SIGNAL_AMPLITUDE    2.0f
+#define SIGNAL_FREQUENCY    (100.5f * (SAMPLING_RATE / FFT_SIZE))
+
+//======================================================================================
+// 全局变量
+//======================================================================================
+AccurateFFT_Handle fft_handle;      // FFT模块的句柄
+float32_t test_input_signal[FFT_SIZE]; // 输入信号缓冲区
+float32_t test_input_signal2[FFT_SIZE * 2]; // 输入信号缓冲区
+//======================================================================================
+// 函数声明
+//======================================================================================
+void generate_test_signal(float32_t* p_buffer, uint16_t size);
+void ProcessADCData();
 /* USER CODE END 0 */
 
 /**
@@ -89,13 +113,36 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART1_UART_Init();
+  MX_ADC1_Init();
+  MX_TIM3_Init();
+  MX_UART4_Init();
+  MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
-  printf("AD9910 Integrated Demo Started...\r\n");
 
-  // 1. 初始化AD9910芯片 (默认进入DDS模式)
+  printf("\r\n--- 精确FFT幅值测量程序 (模块化版本) ---\r\n");
+
+  // 1. 初始化FFT模块
+  arm_status status = AccurateFFT_Init(&fft_handle, FFT_SIZE, SAMPLING_RATE, WINDOW_TYPE_FLATTOP);
+  if (status != ARM_MATH_SUCCESS) {
+      printf("FFT模块初始化失败! 错误码: %d\r\n", status);
+      while(1);
+  }
+  printf("FFT模块初始化成功!\r\n");
+
+  // 2. 生成测试信号
+  SampleADC_DMA();
+  // 处理ADC采样数据
+  ProcessADCData();
+
+  // 3. 执行测量
+  status = AccurateFFT_Measure(&fft_handle, test_input_signal);
+  if (status != ARM_MATH_SUCCESS) {
+      printf("FFT测量执行失败! 错误码: %d\r\n", status);
+      while(1);
+  }
   Init_AD9910();
-  printf("AD9910 Initialized.\r\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -105,29 +152,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    /* --- 演示AWG任意波形模式 --- */
-    printf("\n--- Entering AWG Mode with SINC wave ---\r\n");
-    Init_AD9910();
-    // 步骤 1: 启动AWG模式，此函数会完成波形写入和模式切换
-    AD9910_AWG_Start(SINC_WAVE);
-
-    AD9910_AWG_Update_Freq_Phase(24400, 180);
-    HAL_Delay(500);
-
-
-     /* --- 演示DDS正弦波模式 --- */
-    printf("\n--- Entering DDS Sine Wave Mode ---\r\n");
-    printf("Setting 10MHz at 100%% amplitude...\r\n");
-    AD9910_Set_Sine_Wave(10000000, 16383); // 输出10MHz满幅正弦波
-    HAL_Delay(500); // 持续5秒
-
-    printf("Setting 20MHz at 25%% amplitude...\r\n");
-    AD9910_Set_Sine_Wave(20000000, 4095); // 输出20MHz 1/4幅度正弦波
-    HAL_Delay(500); // 持续5秒
-
-
-    
-
   }
   /* USER CODE END 3 */
 }
@@ -179,7 +203,26 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void ProcessADCData(){
+  for(int i = 0; i < ADC_DMA_BUFFER_SIZE; i++) {
+      // 将ADC1和ADC2的采样数据转换为浮点数
+      test_input_signal[i] = 3.3f * (float32_t)(ADC1_Buffer[i]) / 4095.0f; // 假设ADC分辨率为12位，参考电压为3.3V
+  }
 
+  // 使用Arm数学库进行去除直流偏置
+  float32_t mean_value;
+  arm_mean_f32(test_input_signal, ADC_DMA_BUFFER_SIZE, &mean_value);
+  for(int i = 0; i < ADC_DMA_BUFFER_SIZE; i++) {
+      test_input_signal[i] -= mean_value; // 去除直流偏置
+  }
+}
+void generate_test_signal(float32_t* p_buffer, uint16_t size)
+{
+    float32_t time_step = 1.0f / SAMPLING_RATE;
+    for (int i = 0; i < size; i++) {
+        p_buffer[i] = SIGNAL_AMPLITUDE * arm_sin_f32(2 * PI * SIGNAL_FREQUENCY * i * time_step);
+    }
+}
 /* USER CODE END 4 */
 
 /**
