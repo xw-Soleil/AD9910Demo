@@ -12,13 +12,25 @@ float32_t waveKonwnModelVpp = 1.0f; // 已知模型电路峰峰值 V
 
 void NotifyButton(uint16 screen_id, uint16 control_id, uint8 state){
     if(screen_id == 2 && control_id == 1){
+        sys_mode = SYS_BASIC_OUTPUT; // 切换到基本输出模式
         AD9910_Set_Sine_Wave(waveDDSFreq*1000.0f, 16383 * CorVppSamIBord(waveDDSFreq, waveDDSVpp) / MAX_DDS_VPP); // 设置正弦波频率为100kHz，幅度为16383（对应3.3V）
     }
     if(screen_id == 3 && control_id == 1){
+        sys_mode = SYS_BASIC_HS_OUTPUT; // 切换到已知模型输出模式
         KnownModelOutPutCorr(waveKonwnModelFreq * 1000.0f, waveKonwnModelVpp); // 设置已知模型输出电压
     }
     if((screen_id == 2 || screen_id == 3) && control_id == 4){
         Init_AD9910(); // 初始化AD9910
+        sys_mode = SYS_WAITING; // 切换到等待状态
+    }
+    if(screen_id == 4 && control_id == 1 && state == 0){
+        sys_mode = SYS_PERFORMANCE_LEARN; // 切换到性能学习模式
+    }
+    if(screen_id == 4 && control_id == 2 && state == 0){
+        sys_mode = SYS_PERFORMANCE_OUTPUT; // 切换到性能输出模式
+    }
+    if(screen_id == 4 && control_id == 3 && state == 0){
+        sys_mode = SYS_WAITING; // 切换到性能学习完成状态
     }
 }
 void NotifyText(uint16 screen_id, uint16 control_id, uint8 *str){

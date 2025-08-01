@@ -18,6 +18,13 @@
         "system_identification.h": "c",
         "utils.h": "c",
         "adc.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "hmi.h": "c",
+        "tim.h": "c",
+        "stm32f4xx_hal.h": "c",
+        "hmi_driver.h": "c",
+        "cmd_process.h": "c",
+        "cmd_queue.h": "c",
+        "hmi_user_uart.h": "c"
     }
 }

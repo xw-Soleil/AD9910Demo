@@ -34,6 +34,7 @@
 #include "sample.h"
 #include "hmi.h"
 #include "Correct.h"
+#include "screen.h"
 
 
 #include "app_config.h"
@@ -50,13 +51,6 @@ typedef enum {
     APP_MODE_FILTERING
 } AppMode_t;
 
-typedef enum{
-  SYS_WAITING,  // ç­‰å¾…çŠ¶æ€
-  SYS_BASIC_OUTPUT, // åŸºæœ¬è¦æ±‚è¾“å‡º
-  SYS_BASIC_HS_OUTPUT, // åŸºäºå·²çŸ¥æ¨¡å‹çš„è¾“å‡º
-  SYS_PERFORMANCE_LEARN,  // å‘æŒ¥éƒ¨åˆ†å­¦ä¹ 
-  SYS_PERFORMANCE_OUTPUT
-} SysMode_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -86,18 +80,18 @@ void SystemClock_Config(void);
 
 
 //======================================================================================
-// å…¨å±€å˜é‡
+// È«¾Ö±äÁ¿
 //======================================================================================
-AccurateFFT_Handle fft_handle;      // FFTæ¨¡å—çš„å¥æŸ„
-float32_t test_input_signal[FFT_SIZE]; // è¾“å…¥ä¿¡å·ç¼“å†²åŒº
-float32_t test_input_signal2[FFT_SIZE * 2]; // è¾“å…¥ä¿¡å·ç¼“å†²åŒº
+AccurateFFT_Handle fft_handle;      // FFTÄ£¿éµÄ¾ä±ú
+float32_t test_input_signal[FFT_SIZE]; // ÊäÈëĞÅºÅ»º³åÇø
+float32_t test_input_signal2[FFT_SIZE * 2]; // ÊäÈëĞÅºÅ»º³åÇø
 
 
 volatile AppMode_t g_app_mode = APP_MODE_IDENTIFICATION;
-volatile SysMode_t g_sys_mode = SYS_BASIC_OUTPUT; // ç³»ç»Ÿæ¨¡å¼
+volatile SysMode_t sys_mode = SYS_BASIC_OUTPUT; // ÏµÍ³Ä£Ê½
 
 //======================================================================================
-// å‡½æ•°å£°æ˜
+// º¯ÊıÉùÃ÷
 //======================================================================================
 void generate_test_signal(float32_t* p_buffer, uint16_t size);
 void ProcessADCData();
@@ -143,9 +137,9 @@ int main(void)
   MX_TIM6_Init();
   MX_ADC3_Init();
   /* USER CODE BEGIN 2 */
-  // HAL_Delay(100); // ç¡®ä¿æ‰€æœ‰å¤–è®¾åˆå§‹åŒ–å®Œæˆ
-  // VisualTFT_Init(); // åˆå§‹åŒ–ä¸²å£å±
-  // Init_AD9910(); // åˆå§‹åŒ–AD9910
+  // HAL_Delay(100); // È·±£ËùÓĞÍâÉè³õÊ¼»¯Íê³É
+  VisualTFT_Init(); // ³õÊ¼»¯´®¿ÚÆÁ
+  Init_AD9910(); // ³õÊ¼»¯AD9910
   // float32_t vpp = MeasureAdcInputVpp();
   // float32_t vppCorr = ADCSampleInputCorr(100, vpp);
 
@@ -168,55 +162,125 @@ int main(void)
 
   // SweepKnownBoardHs();
   // Init_AD9910();
-  // AD9910_Set_Sine_Wave(1000, 16383 * 1.0f / MAX_DDS_VPP); // è®¾ç½®æ­£å¼¦æ³¢é¢‘ç‡ä¸º100kHzï¼Œå¹…åº¦ä¸º16383ï¼ˆå¯¹åº”3.3Vï¼‰
-  // HAL_Delay(100); // ç¡®ä¿æ‰€æœ‰å¤–è®¾åˆå§‹åŒ–å®Œæˆ
+  // AD9910_Set_Sine_Wave(1000, 16383 * 1.0f / MAX_DDS_VPP); // ÉèÖÃÕıÏÒ²¨ÆµÂÊÎª100kHz£¬·ù¶ÈÎª16383£¨¶ÔÓ¦3.3V£©
+  // HAL_Delay(100); // È·±£ËùÓĞÍâÉè³õÊ¼»¯Íê³É
   // float32_t vpp = MeasureAdcInputVpp();
 
   // --- STAGE 1: SYSTEM IDENTIFICATION ---
-  g_app_mode = APP_MODE_IDENTIFICATION;
-  SysId_Init();
-
-  while (!SysId_IsDone())
-  {
-    // The state machine is driven by interrupts and this loop
-    SysId_RunStateMachine();
-  }
-
-  // --- STAGE 2: REAL-TIME FILTERING ---
-  printf("\nSwitching to Real-Time Filter Mode...\n");
-  g_app_mode = APP_MODE_FILTERING;
-
-  // 1. Get the results from the identification stage
-  FilterParams_t fitted_params = SysId_GetFittedParams();
-  FilterType_t filter_type = SysId_GetFilterType();
-
-  // 2. Design the IIR filter using the identified parameters
-  BiquadCoeffs iir_coeffs;
-  // Note: The FilterType_t enum in iir_filter_design.h must match the one in app_config.h
-  design_biquad_filter(
-      (FilterType_t)filter_type, // Cast might be needed if enums differ
-      fitted_params.k,
-      fitted_params.f0,
-      fitted_params.q,
-      REALTIME_SAMPLING_RATE,
-      &iir_coeffs
-  );
-
-  // 3. Initialize and start the real-time filter module
-  RealtimeFilter_Init(&iir_coeffs);
-  RealtimeFilter_Start();
+  
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  static SysMode_t previous_sys_mode = SYS_WAITING; // ³õÊ¼ÖµÉèÎªÒ»¸öÎŞĞ§»òÄ¬ÈÏ×´Ì¬
+  static int filter_initialized = 0; // ÓÃÕâ¸ö´úÌæÖ®Ç°µÄ initialized ±êÖ¾
+
   while (1)
   {
-    // VisualTFT_Poll();
-    // HAL_Delay(100); // ç¡®ä¿æ‰€æœ‰å¤–è®¾åˆå§‹åŒ–å®Œæˆ
+    VisualTFT_Poll();
+    
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    // ==============================================================================
+    // ºËĞÄĞŞ¸Ä£º×´Ì¬ÇĞ»»¼ì²â
+    // ==============================================================================
+    // Ö»ÓĞµ±Ä£Ê½·¢Éú¸Ä±äÊ±£¬²ÅÖ´ĞĞÏÂÃæµÄ´úÂë¿é
+    if (sys_mode != previous_sys_mode)
+    {
+        // --- a. ´¦ÀíÀë¿ªÉÏÒ»¸ö×´Ì¬µÄÂß¼­ ---
+        if (previous_sys_mode == SYS_PERFORMANCE_OUTPUT)
+        {
+            RealtimeFilter_Stop(); // Ö»ÓĞÔÚÀë¿ªOUTPUTÄ£Ê½Ê±²ÅÍ£Ö¹
+            filter_initialized = 0; // ÖØÖÃÂË²¨Æ÷³õÊ¼»¯±êÖ¾
+            printf("Stopped Real-time Filter.\n");
+            SendText(4, 4, "");
+        }
+
+        // --- b. ´¦Àí½øÈëĞÂ×´Ì¬µÄÂß¼­ ---
+        switch (sys_mode)
+        {
+            case SYS_PERFORMANCE_LEARN:
+                g_app_mode = APP_MODE_IDENTIFICATION;
+                SysId_Init(); // Ö»ÔÚ½øÈëLEARNÄ£Ê½Ê±³õÊ¼»¯Ò»´Î
+                printf("Entering LEARN mode, SysId initialized.\n");
+                break;
+
+            case SYS_PERFORMANCE_LEARN_DONE:
+                FilterType_t filter_type = SysId_GetFilterType(); // »ñÈ¡±æÊ¶µÄÂË²¨Æ÷ÀàĞÍ
+                if(filter_type == FILTER_TYPE_LPF) {
+                    SendText(4, 4, "µÍÍ¨ÂË²¨Æ÷");
+                }
+                else if(filter_type == FILTER_TYPE_HPF) {
+                    SendText(4, 4, "¸ßÍ¨ÂË²¨Æ÷");
+                }
+                else if(filter_type == FILTER_TYPE_BPF) {
+                    SendText(4, 4, "´øÍ¨ÂË²¨Æ÷");
+                }
+                else if(filter_type == FILTER_TYPE_BSF) {
+                    SendText(4, 4, "´ø×èÂË²¨Æ÷");
+                }
+                else {
+                    SendText(4, 4, "Î´ÖªÂË²¨Æ÷");
+                }
+                break;
+            case SYS_PERFORMANCE_OUTPUT:
+                if (!filter_initialized) // È·±£Ö»³õÊ¼»¯Ò»´Î
+                {
+                    printf("Entering OUTPUT mode, configuring filter...\n");
+                    g_app_mode = APP_MODE_FILTERING;
+                    
+                    FilterParams_t fitted_params = SysId_GetFittedParams();
+                    FilterType_t filter_type = SysId_GetFilterType();
+                    BiquadCoeffs iir_coeffs;
+
+                    design_biquad_filter(
+                        (FilterType_t)filter_type,
+                        fitted_params.k, fitted_params.f0, fitted_params.q,
+                        REALTIME_SAMPLING_RATE, &iir_coeffs);
+
+                    RealtimeFilter_Init(&iir_coeffs);
+                    RealtimeFilter_Start();
+                    filter_initialized = 1;
+                    printf("Filter configured and started.\n");
+                }
+                break;
+            
+            // ¿ÉÒÔÎªÆäËûÄ£Ê½Ìí¼ÓÈë³¡Âß¼­
+            case SYS_BASIC_OUTPUT:
+            case SYS_BASIC_HS_OUTPUT:
+                // ...
+                break;
+            default:
+                // ÆäËû×´Ì¬²»ĞèÒªÌØÊâ´¦Àí
+                break;
+        }
+
+        // --- c. ¸üĞÂ×´Ì¬£¬×¼±¸ÏÂÒ»´Î¼ì²â ---
+        previous_sys_mode = sys_mode;
+    }
+
+
+    // ==============================================================================
+    // µ±Ç°×´Ì¬µÄ³ÖĞøĞÔÈÎÎñ£¨Ã¿´ÎÑ­»·¶¼¿ÉÄÜÖ´ĞĞ£©
+    // ==============================================================================
+    if (sys_mode == SYS_PERFORMANCE_LEARN)
+    {
+        // £¡£¡£¡¡¾ÖØÒª¡¿ÒÆ³ıÁË×èÈûµÄwhileÑ­»·£¡£¡£¡
+        // ÏÖÔÚÃ¿´ÎÖ÷Ñ­»·Ö»µ÷ÓÃÒ»´Î×´Ì¬»ú£¬²»»á¿¨ËÀÏµÍ³
+        if (!SysId_IsDone())
+        {
+            SysId_RunStateMachine();
+        }
+        else
+        {
+            // µ±±æÊ¶Íê³Éºó£¬×Ô¶¯ÇĞ»»µ½ÏÂÒ»¸ö×´Ì¬
+            printf("\nSystem Identification complete!\n");
+            sys_mode = SYS_PERFORMANCE_LEARN_DONE; // ×Ô¶¯ÇĞ»»µ½Ñ§Ï°Íê³É×´Ì¬
+        }
+    }
+    
   }
   /* USER CODE END 3 */
 }
@@ -270,15 +334,15 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void ProcessADCData(){
   for(int i = 0; i < ADC_DMA_BUFFER_SIZE; i++) {
-      // å°†ADC1å’ŒADC2çš„é‡‡æ ·æ•°æ®è½¬æ¢ä¸ºæµ®ç‚¹æ•°
-      test_input_signal[i] = 3.3f * (float32_t)(ADC1_Buffer[i]) / 4095.0f; // å‡è®¾ADCåˆ†è¾¨ç‡ä¸º12ä½ï¼Œå‚è€ƒç”µå‹ä¸º3.3V
+      // ½«ADC1ºÍADC2µÄ²ÉÑùÊı¾İ×ª»»Îª¸¡µãÊı
+      test_input_signal[i] = 3.3f * (float32_t)(ADC1_Buffer[i]) / 4095.0f; // ¼ÙÉèADC·Ö±æÂÊÎª12Î»£¬²Î¿¼µçÑ¹Îª3.3V
   }
 
-  // ä½¿ç”¨Armæ•°å­¦åº“è¿›è¡Œå»é™¤ç›´æµåç½®
+  // Ê¹ÓÃArmÊıÑ§¿â½øĞĞÈ¥³ıÖ±Á÷Æ«ÖÃ
   float32_t mean_value;
   arm_mean_f32(test_input_signal, ADC_DMA_BUFFER_SIZE, &mean_value);
   for(int i = 0; i < ADC_DMA_BUFFER_SIZE; i++) {
-      test_input_signal[i] -= mean_value; // å»é™¤ç›´æµåç½®
+      test_input_signal[i] -= mean_value; // È¥³ıÖ±Á÷Æ«ÖÃ
   }
 }
 void generate_test_signal(float32_t* p_buffer, uint16_t size)
@@ -311,7 +375,7 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
 
 void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc) {
     if (g_app_mode == APP_MODE_IDENTIFICATION) {
-        SysId_ADCErrorCallback(); // <--- æ·»åŠ è¿™ä¸€è¡Œ
+        SysId_ADCErrorCallback(); // <--- Ìí¼ÓÕâÒ»ĞĞ
     } else if (g_app_mode == APP_MODE_FILTERING) {
         RealtimeFilter_ADCErrorCallback();
     }

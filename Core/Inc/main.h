@@ -31,6 +31,15 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+typedef enum{
+  SYS_WAITING,  // 等待状态
+  SYS_BASIC_OUTPUT, // 基本要求输出
+  SYS_BASIC_HS_OUTPUT, // 基于已知模型的输出
+  SYS_PERFORMANCE_LEARN,  // 发挥部分学习
+  SYS_PERFORMANCE_LEARN_DONE, // 发挥部分学习完成
+  SYS_PERFORMANCE_OUTPUT  // 发挥部分输出
+} SysMode_t;
+extern volatile SysMode_t sys_mode;
 
 /* USER CODE END Includes */
 
