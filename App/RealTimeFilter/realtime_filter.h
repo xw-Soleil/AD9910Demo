@@ -6,7 +6,7 @@
 #include <stdbool.h>
 
 #include "system_identification.h"
-#include "lm_fitter.h"
+#include "expert_fitter_double.h" // For ExpertFitResult_t_double
 #include "accurate_fft.h"
 #include "main.h"
 #include <stdio.h>

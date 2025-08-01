@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "arm_math.h"
 #include "dac.h"
 #include "dma.h"
 #include "tim.h"
@@ -80,18 +81,18 @@ void SystemClock_Config(void);
 
 
 //======================================================================================
-// È«¾Ö±äÁ¿
+// È«ï¿½Ö±ï¿½ï¿½ï¿½
 //======================================================================================
-AccurateFFT_Handle fft_handle;      // FFTÄ£¿éµÄ¾ä±ú
-float32_t test_input_signal[FFT_SIZE]; // ÊäÈëÐÅºÅ»º³åÇø
-float32_t test_input_signal2[FFT_SIZE * 2]; // ÊäÈëÐÅºÅ»º³åÇø
+AccurateFFT_Handle fft_handle;      // FFTÄ£ï¿½ï¿½Ä¾ï¿½ï¿½
+float32_t test_input_signal[FFT_SIZE]; // ï¿½ï¿½ï¿½ï¿½ï¿½ÅºÅ»ï¿½ï¿½ï¿½ï¿½ï¿½
+float32_t test_input_signal2[FFT_SIZE * 2]; // ï¿½ï¿½ï¿½ï¿½ï¿½ÅºÅ»ï¿½ï¿½ï¿½ï¿½ï¿½
 
 
 volatile AppMode_t g_app_mode = APP_MODE_IDENTIFICATION;
 volatile SysMode_t sys_mode = SYS_BASIC_OUTPUT; // ÏµÍ³Ä£Ê½
 
 //======================================================================================
-// º¯ÊýÉùÃ÷
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 //======================================================================================
 void generate_test_signal(float32_t* p_buffer, uint16_t size);
 void ProcessADCData();
@@ -137,9 +138,9 @@ int main(void)
   MX_TIM6_Init();
   MX_ADC3_Init();
   /* USER CODE BEGIN 2 */
-  // HAL_Delay(100); // È·±£ËùÓÐÍâÉè³õÊ¼»¯Íê³É
-  VisualTFT_Init(); // ³õÊ¼»¯´®¿ÚÆÁ
-  Init_AD9910(); // ³õÊ¼»¯AD9910
+  // HAL_Delay(100); // È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½
+  VisualTFT_Init(); // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  Init_AD9910(); // ï¿½ï¿½Ê¼ï¿½ï¿½AD9910
   // float32_t vpp = MeasureAdcInputVpp();
   // float32_t vppCorr = ADCSampleInputCorr(100, vpp);
 
@@ -162,8 +163,8 @@ int main(void)
 
   // SweepKnownBoardHs();
   // Init_AD9910();
-  // AD9910_Set_Sine_Wave(1000, 16383 * 1.0f / MAX_DDS_VPP); // ÉèÖÃÕýÏÒ²¨ÆµÂÊÎª100kHz£¬·ù¶ÈÎª16383£¨¶ÔÓ¦3.3V£©
-  // HAL_Delay(100); // È·±£ËùÓÐÍâÉè³õÊ¼»¯Íê³É
+  // AD9910_Set_Sine_Wave(1000, 16383 * 1.0f / MAX_DDS_VPP); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò²ï¿½Æµï¿½ï¿½Îª100kHzï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îª16383ï¿½ï¿½ï¿½ï¿½Ó¦3.3Vï¿½ï¿½
+  // HAL_Delay(100); // È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½
   // float32_t vpp = MeasureAdcInputVpp();
 
   // --- STAGE 1: SYSTEM IDENTIFICATION ---
@@ -173,8 +174,8 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  static SysMode_t previous_sys_mode = SYS_WAITING; // ³õÊ¼ÖµÉèÎªÒ»¸öÎÞÐ§»òÄ¬ÈÏ×´Ì¬
-  static int filter_initialized = 0; // ÓÃÕâ¸ö´úÌæÖ®Ç°µÄ initialized ±êÖ¾
+  static SysMode_t previous_sys_mode = SYS_WAITING; // ï¿½ï¿½Ê¼Öµï¿½ï¿½ÎªÒ»ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½Ä¬ï¿½ï¿½×´Ì¬
+  static int filter_initialized = 0; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö®Ç°ï¿½ï¿½ initialized ï¿½ï¿½Ö¾
 
   while (1)
   {
@@ -184,60 +185,60 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     // ==============================================================================
-    // ºËÐÄÐÞ¸Ä£º×´Ì¬ÇÐ»»¼ì²â
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸Ä£ï¿½×´Ì¬ï¿½Ð»ï¿½ï¿½ï¿½ï¿½
     // ==============================================================================
-    // Ö»ÓÐµ±Ä£Ê½·¢Éú¸Ä±äÊ±£¬²ÅÖ´ÐÐÏÂÃæµÄ´úÂë¿é
+    // Ö»ï¿½Ðµï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä´ï¿½ï¿½ï¿½ï¿½
     if (sys_mode != previous_sys_mode)
     {
-        // --- a. ´¦ÀíÀë¿ªÉÏÒ»¸ö×´Ì¬µÄÂß¼­ ---
+        // --- a. ï¿½ï¿½ï¿½ï¿½ï¿½ë¿ªï¿½ï¿½Ò»ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ß¼ï¿½ ---
         if (previous_sys_mode == SYS_PERFORMANCE_OUTPUT)
         {
-            RealtimeFilter_Stop(); // Ö»ÓÐÔÚÀë¿ªOUTPUTÄ£Ê½Ê±²ÅÍ£Ö¹
-            filter_initialized = 0; // ÖØÖÃÂË²¨Æ÷³õÊ¼»¯±êÖ¾
+            RealtimeFilter_Stop(); // Ö»ï¿½ï¿½ï¿½ï¿½ï¿½ë¿ªOUTPUTÄ£Ê½Ê±ï¿½ï¿½Í£Ö¹
+            filter_initialized = 0; // ï¿½ï¿½ï¿½ï¿½ï¿½Ë²ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ö¾
             printf("Stopped Real-time Filter.\n");
             SendText(4, 4, "");
         }
 
-        // --- b. ´¦Àí½øÈëÐÂ×´Ì¬µÄÂß¼­ ---
+        // --- b. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ß¼ï¿½ ---
         switch (sys_mode)
         {
             case SYS_PERFORMANCE_LEARN:
                 g_app_mode = APP_MODE_IDENTIFICATION;
-                SysId_Init(); // Ö»ÔÚ½øÈëLEARNÄ£Ê½Ê±³õÊ¼»¯Ò»´Î
+                SysId_Init(); // Ö»ï¿½Ú½ï¿½ï¿½ï¿½LEARNÄ£Ê½Ê±ï¿½ï¿½Ê¼ï¿½ï¿½Ò»ï¿½ï¿½
                 printf("Entering LEARN mode, SysId initialized.\n");
                 break;
 
             case SYS_PERFORMANCE_LEARN_DONE:
-                FilterType_t filter_type = SysId_GetFilterType(); // »ñÈ¡±æÊ¶µÄÂË²¨Æ÷ÀàÐÍ
+                FilterType_t filter_type = SysId_GetFinalFilterType(); // ï¿½ï¿½È¡ï¿½ï¿½Ê¶ï¿½ï¿½ï¿½Ë²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 if(filter_type == FILTER_TYPE_LPF) {
-                    SendText(4, 4, "µÍÍ¨ÂË²¨Æ÷");
+                    SendText(4, 4, "ï¿½ï¿½Í¨ï¿½Ë²ï¿½ï¿½ï¿½");
                 }
                 else if(filter_type == FILTER_TYPE_HPF) {
-                    SendText(4, 4, "¸ßÍ¨ÂË²¨Æ÷");
+                    SendText(4, 4, "ï¿½ï¿½Í¨ï¿½Ë²ï¿½ï¿½ï¿½");
                 }
                 else if(filter_type == FILTER_TYPE_BPF) {
-                    SendText(4, 4, "´øÍ¨ÂË²¨Æ÷");
+                    SendText(4, 4, "ï¿½ï¿½Í¨ï¿½Ë²ï¿½ï¿½ï¿½");
                 }
                 else if(filter_type == FILTER_TYPE_BSF) {
-                    SendText(4, 4, "´ø×èÂË²¨Æ÷");
+                    SendText(4, 4, "ï¿½ï¿½ï¿½ï¿½ï¿½Ë²ï¿½ï¿½ï¿½");
                 }
                 else {
-                    SendText(4, 4, "Î´ÖªÂË²¨Æ÷");
+                    SendText(4, 4, "Î´Öªï¿½Ë²ï¿½ï¿½ï¿½");
                 }
                 break;
             case SYS_PERFORMANCE_OUTPUT:
-                if (!filter_initialized) // È·±£Ö»³õÊ¼»¯Ò»´Î
+                if (!filter_initialized) // È·ï¿½ï¿½Ö»ï¿½ï¿½Ê¼ï¿½ï¿½Ò»ï¿½ï¿½
                 {
                     printf("Entering OUTPUT mode, configuring filter...\n");
                     g_app_mode = APP_MODE_FILTERING;
                     
-                    FilterParams_t fitted_params = SysId_GetFittedParams();
-                    FilterType_t filter_type = SysId_GetFilterType();
+                    FilterParams_t_double fitted_params = SysId_GetFittedParams();
+                    FilterType_t filter_type = SysId_GetPreliminaryFilterType();
                     BiquadCoeffs iir_coeffs;
 
                     design_biquad_filter(
                         (FilterType_t)filter_type,
-                        fitted_params.k, fitted_params.f0, fitted_params.q,
+                        fitted_params.k, fitted_params.w0 / 2 / PI, fitted_params.q,
                         REALTIME_SAMPLING_RATE, &iir_coeffs);
 
                     RealtimeFilter_Init(&iir_coeffs);
@@ -247,37 +248,37 @@ int main(void)
                 }
                 break;
             
-            // ¿ÉÒÔÎªÆäËûÄ£Ê½Ìí¼ÓÈë³¡Âß¼­
+            // ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ë³¡ï¿½ß¼ï¿½
             case SYS_BASIC_OUTPUT:
             case SYS_BASIC_HS_OUTPUT:
                 // ...
                 break;
             default:
-                // ÆäËû×´Ì¬²»ÐèÒªÌØÊâ´¦Àí
+                // ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½â´¦ï¿½ï¿½
                 break;
         }
 
-        // --- c. ¸üÐÂ×´Ì¬£¬×¼±¸ÏÂÒ»´Î¼ì²â ---
+        // --- c. ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½×¼ï¿½ï¿½ï¿½ï¿½Ò»ï¿½Î¼ï¿½ï¿½ ---
         previous_sys_mode = sys_mode;
     }
 
 
     // ==============================================================================
-    // µ±Ç°×´Ì¬µÄ³ÖÐøÐÔÈÎÎñ£¨Ã¿´ÎÑ­»·¶¼¿ÉÄÜÖ´ÐÐ£©
+    // ï¿½ï¿½Ç°×´Ì¬ï¿½Ä³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ð£ï¿½
     // ==============================================================================
     if (sys_mode == SYS_PERFORMANCE_LEARN)
     {
-        // £¡£¡£¡¡¾ÖØÒª¡¿ÒÆ³ýÁË×èÈûµÄwhileÑ­»·£¡£¡£¡
-        // ÏÖÔÚÃ¿´ÎÖ÷Ñ­»·Ö»µ÷ÓÃÒ»´Î×´Ì¬»ú£¬²»»á¿¨ËÀÏµÍ³
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½Æ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½whileÑ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        // ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á¿¨ï¿½ï¿½ÏµÍ³
         if (!SysId_IsDone())
         {
             SysId_RunStateMachine();
         }
         else
         {
-            // µ±±æÊ¶Íê³Éºó£¬×Ô¶¯ÇÐ»»µ½ÏÂÒ»¸ö×´Ì¬
+            // ï¿½ï¿½ï¿½ï¿½Ê¶ï¿½ï¿½Éºï¿½ï¿½Ô¶ï¿½ï¿½Ð»ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½×´Ì¬
             printf("\nSystem Identification complete!\n");
-            sys_mode = SYS_PERFORMANCE_LEARN_DONE; // ×Ô¶¯ÇÐ»»µ½Ñ§Ï°Íê³É×´Ì¬
+            sys_mode = SYS_PERFORMANCE_LEARN_DONE; // ï¿½Ô¶ï¿½ï¿½Ð»ï¿½ï¿½ï¿½Ñ§Ï°ï¿½ï¿½ï¿½×´Ì¬
         }
     }
     
@@ -334,15 +335,15 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void ProcessADCData(){
   for(int i = 0; i < ADC_DMA_BUFFER_SIZE; i++) {
-      // ½«ADC1ºÍADC2µÄ²ÉÑùÊý¾Ý×ª»»Îª¸¡µãÊý
-      test_input_signal[i] = 3.3f * (float32_t)(ADC1_Buffer[i]) / 4095.0f; // ¼ÙÉèADC·Ö±æÂÊÎª12Î»£¬²Î¿¼µçÑ¹Îª3.3V
+      // ï¿½ï¿½ADC1ï¿½ï¿½ADC2ï¿½Ä²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+      test_input_signal[i] = 3.3f * (float32_t)(ADC1_Buffer[i]) / 4095.0f; // ï¿½ï¿½ï¿½ï¿½ADCï¿½Ö±ï¿½ï¿½ï¿½Îª12Î»ï¿½ï¿½ï¿½Î¿ï¿½ï¿½ï¿½Ñ¹Îª3.3V
   }
 
-  // Ê¹ÓÃArmÊýÑ§¿â½øÐÐÈ¥³ýÖ±Á÷Æ«ÖÃ
+  // Ê¹ï¿½ï¿½Armï¿½ï¿½Ñ§ï¿½ï¿½ï¿½ï¿½ï¿½È¥ï¿½ï¿½Ö±ï¿½ï¿½Æ«ï¿½ï¿½
   float32_t mean_value;
   arm_mean_f32(test_input_signal, ADC_DMA_BUFFER_SIZE, &mean_value);
   for(int i = 0; i < ADC_DMA_BUFFER_SIZE; i++) {
-      test_input_signal[i] -= mean_value; // È¥³ýÖ±Á÷Æ«ÖÃ
+      test_input_signal[i] -= mean_value; // È¥ï¿½ï¿½Ö±ï¿½ï¿½Æ«ï¿½ï¿½
   }
 }
 void generate_test_signal(float32_t* p_buffer, uint16_t size)
@@ -375,7 +376,7 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
 
 void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc) {
     if (g_app_mode == APP_MODE_IDENTIFICATION) {
-        SysId_ADCErrorCallback(); // <--- Ìí¼ÓÕâÒ»ÐÐ
+        SysId_ADCErrorCallback(); // <--- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
     } else if (g_app_mode == APP_MODE_FILTERING) {
         RealtimeFilter_ADCErrorCallback();
     }
