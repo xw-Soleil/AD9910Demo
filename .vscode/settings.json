@@ -1,45 +1,10 @@
 {
     "files.associations": {
         "*.scs": "spectre",
-        "ad9910.h": "c",
-        "main.h": "c",
-        "AD9910.H": "cpp",
-        "AD9910V1.C": "cpp",
         "sample.h": "c",
-        "vppfftmeu.h": "c",
-        "screen.h": "c",
-        "process.h": "c",
-        "arm_math.h": "c",
-        "correct.h": "c",
-        "stdint.h": "c",
-        "iir_filter_design.h": "c",
-        "app_config.h": "c",
         "realtime_filter.h": "c",
         "system_identification.h": "c",
-        "utils.h": "c",
-        "adc.h": "c",
-        "stdlib.h": "c",
-        "hmi.h": "c",
-        "tim.h": "c",
-        "stm32f4xx_hal.h": "c",
-        "hmi_driver.h": "c",
-        "cmd_process.h": "c",
-        "cmd_queue.h": "c",
-        "hmi_user_uart.h": "c",
-        "lm_fitter.h": "c",
-        "string.h": "c",
-        "accurate_fft.h": "c"
-    },
-    "cmake.cmakePath": "cube-cmake",
-    "cmake.configureArgs": [
-        "-DCMAKE_COMMAND=cube-cmake"
-    ],
-    "cmake.preferredGenerators": [
-        "Ninja"
-    ],
-    "stm32cube-ide-clangd.path": "cube",
-    "stm32cube-ide-clangd.arguments": [
-        "starm-clangd",
-        "--query-driver=${env:CUBE_BUNDLE_PATH}/gnu-tools-for-stm32/13.3.1+st.9/bin/arm-none-eabi-gcc.exe"
-    ]
+        "iir_filter_design.h": "c",
+        "app_config.h": "c"
+    }
 }

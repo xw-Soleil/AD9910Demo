@@ -19,7 +19,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
-#include "arm_math.h"
 #include "dac.h"
 #include "dma.h"
 #include "tim.h"
@@ -211,19 +210,19 @@ int main(void)
             case SYS_PERFORMANCE_LEARN_DONE:
                 FilterType_t filter_type = SysId_GetFinalFilterType(); // ��ȡ��ʶ���˲�������
                 if(filter_type == FILTER_TYPE_LPF) {
-                    SendText(4, 4, "��ͨ�˲���");
+                    SendText(4, 4, "低通");
                 }
                 else if(filter_type == FILTER_TYPE_HPF) {
-                    SendText(4, 4, "��ͨ�˲���");
+                    SendText(4, 4, "高通");
                 }
                 else if(filter_type == FILTER_TYPE_BPF) {
-                    SendText(4, 4, "��ͨ�˲���");
+                    SendText(4, 4, "带通");
                 }
                 else if(filter_type == FILTER_TYPE_BSF) {
-                    SendText(4, 4, "�����˲���");
+                    SendText(4, 4, "带阻");
                 }
                 else {
-                    SendText(4, 4, "δ֪�˲���");
+                    SendText(4, 4, "未知滤波器");
                 }
                 break;
             case SYS_PERFORMANCE_OUTPUT:
@@ -232,8 +231,12 @@ int main(void)
                     printf("Entering OUTPUT mode, configuring filter...\n");
                     g_app_mode = APP_MODE_FILTERING;
                     
-                    FilterParams_t_double fitted_params = SysId_GetFittedParams();
-                    FilterType_t filter_type = SysId_GetPreliminaryFilterType();
+                    // FilterParams_t_double fitted_params = SysId_GetFittedParams();
+                    FilterParams_t_double fitted_params;
+                    fitted_params.k = 0.9688;
+                    fitted_params.w0 = 2*PI * 20.83; // 20.83 Hz
+                    fitted_params.q = 0.0010;
+                    FilterType_t filter_type = FILTER_TYPE_BPF;
                     BiquadCoeffs iir_coeffs;
 
                     design_biquad_filter(
@@ -309,7 +312,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = 8;
-  RCC_OscInitStruct.PLL.PLLN = 160;
+  RCC_OscInitStruct.PLL.PLLN = 72;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -323,10 +326,10 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }

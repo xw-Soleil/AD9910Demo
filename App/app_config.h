@@ -39,7 +39,7 @@ typedef struct {
 
 // MODIFIED: Expanded sweep range to match the new algorithm's simulation range.
 #define SWEEP_FREQ_START        100.0f
-#define SWEEP_FREQ_END          500000.0f
+#define SWEEP_FREQ_END          200000.0f
 
 // --- DAC/Signal Generation Defines (Unchanged) ---
 #define SINE_TABLE_SIZE         128
@@ -56,8 +56,8 @@ typedef struct {
 // --- Dynamic Sampling Defines ---
 #define TARGET_CYCLES_IN_BUFFER 10.0f
 // MODIFIED: MIN_ADC_SAMPLING_FREQ now depends on the new SWEEP_FREQ_END
-#define MIN_ADC_SAMPLING_FREQ   (SWEEP_FREQ_END * 2.5f)
-#define MAX_ADC_SAMPLING_FREQ   2000000.0f
+#define MIN_ADC_SAMPLING_FREQ   (SWEEP_FREQ_START * 2.5f)
+#define MAX_ADC_SAMPLING_FREQ   1000000.0f
 
 // --- Levenberg-Marquardt (LM) Algorithm Defines ---
 // NEW: These are the double-precision parameters for the new expert fitter.
@@ -77,7 +77,7 @@ typedef struct {
 // MODIFIED: REALTIME_SAMPLING_RATE might need adjustment for the wider sweep range.
 // Let's set it to handle up to 500kHz / 2.5 = 200kHz signals, e.g., 500kHz sampling.
 // This depends on your final real-time application needs.
-#define REALTIME_SAMPLING_RATE  500000.0f
+#define REALTIME_SAMPLING_RATE  300000.0f
 #define REALTIME_BUFFER_SIZE    128
 #define PING_PONG_SIZE          (REALTIME_BUFFER_SIZE * 2)
 #define DC_OFFSET               2048
@@ -86,7 +86,7 @@ typedef struct {
 //==============================================================================
 // --- Hardware and Interface Defines (Unchanged) ---
 //==============================================================================
-#define USE_DAC_OUTPUT
+#define USE_DDS_OUTPUT
 #define adciir hadc3
 
 #endif // APP_CONFIG_H
