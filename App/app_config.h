@@ -83,4 +83,13 @@ typedef struct {
  */
 #define adciir hadc3
 
+#define ADCNUM 2
+#if ADCNUM == 1
+#define SINGLE_ADC_MODE  
+#elif ADCNUM == 2
+#define DOUBLE_ADC_MODE
+
+#define adciirDc hadc2
+#endif
+
 #endif // APP_CONFIG_H

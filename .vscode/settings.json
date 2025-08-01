@@ -28,6 +28,9 @@
         "hmi_user_uart.h": "c",
         "lm_fitter.h": "c",
         "string.h": "c",
-        "accurate_fft.h": "c"
+        "accurate_fft.h": "c",
+        "dac.h": "c",
+        "stdio.h": "c",
+        "stdbool.h": "c"
     }
 }

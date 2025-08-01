@@ -30,6 +30,9 @@ typedef enum {
 static volatile SystemState_t g_system_state = STATE_IDLE;
 static uint16_t g_sine_table[SINE_TABLE_SIZE];
 static uint16_t g_adc_buf[ADC_BUFFER_SIZE];
+#ifdef DOUBLE_ADC_MODE
+static uint16_t g_adc_buf_dc[ADC_BUFFER_SIZE]; // For second ADC in double ADC mode
+#endif
 static MeasurementPoint_t g_measured_data[SWEEP_POINTS];
 static uint32_t g_current_sweep_index = 0;
 
@@ -319,13 +322,27 @@ static void stop_sine_output() {
 }
 
 static void start_measurement() {
+
+#ifdef SINGLE_ADC_MODE
     HAL_ADC_Start_DMA(&adciir, (uint32_t*)g_adc_buf, ADC_BUFFER_SIZE);
     HAL_TIM_Base_Start(&htim2);
+#elif  defined(DOUBLE_ADC_MODE)
+    HAL_ADC_Start_DMA(&adciir, (uint32_t*)g_adc_buf, ADC_BUFFER_SIZE);
+    HAL_ADC_Start_DMA(&adciirDc, (uint32_t*)g_adc_buf_dc, ADC_BUFFER_SIZE);
+    HAL_TIM_Base_Start_IT(&htim2); // Start timer with interrupt
+#endif
 }
 
 static void stop_measurement() {
+
+#ifdef SINGLE_ADC_MODE
     HAL_TIM_Base_Stop(&htim2);
     HAL_ADC_Stop_DMA(&adciir);
+#elif  defined(DOUBLE_ADC_MODE)
+    HAL_TIM_Base_Stop_IT(&htim2); // Stop timer with interrupt
+    HAL_ADC_Stop_DMA(&adciir);
+    HAL_ADC_Stop_DMA(&adciirDc);
+#endif
 }
 
 static void update_adc_sampling_rate(float new_rate) {

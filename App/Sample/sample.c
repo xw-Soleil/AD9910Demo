@@ -51,7 +51,7 @@ void SampleADC_DMA(void)
   /* 重要：先开启ADC的DMA采样，再开启定时器 */
 
   /* 先开启ADC1的DMA采样 */
-  if (HAL_ADC_Start_DMA(&hadc1, (uint32_t *)ADC1_Buffer, ADC_DMA_BUFFER_SIZE) != HAL_OK)
+  if (HAL_ADC_Start_DMA(&hadcSple, (uint32_t *)ADC1_Buffer, ADC_DMA_BUFFER_SIZE) != HAL_OK)
   {
     printf("Error starting ADC1 DMA!\n");
     Error_Handler();
@@ -82,7 +82,7 @@ void SampleADC_DMA(void)
   
 
   /* 5. 停止DMA和定时器 */
-  if(HAL_ADC_Stop_DMA(&hadc1) != HAL_OK){
+  if(HAL_ADC_Stop_DMA(&hadcSple) != HAL_OK){
     printf("Error Stopping ADC1 DMA!\n");
   }
   if (HAL_TIM_Base_Stop(&htim3) != HAL_OK)
@@ -99,8 +99,8 @@ void SampleADC_DMA(void)
 void SampleBothADC(void)
 {
   /* 开启DMA采样 */
-  if (HAL_ADC_Start_DMA(&hadc1, (uint32_t *)ADC1_Buffer, ADC_DMA_BUFFER_SIZE) != HAL_OK ||
-      HAL_ADC_Start_DMA(&hadc2, (uint32_t *)ADC2_Buffer, ADC_DMA_BUFFER_SIZE) != HAL_OK) {
+  if (HAL_ADC_Start_DMA(&hadcSple, (uint32_t *)ADC1_Buffer, ADC_DMA_BUFFER_SIZE) != HAL_OK ||
+      HAL_ADC_Start_DMA(&hadcSpleSec, (uint32_t *)ADC2_Buffer, ADC_DMA_BUFFER_SIZE) != HAL_OK) {
     Error_Handler();
   }
 
@@ -114,8 +114,8 @@ void SampleBothADC(void)
   if(timeout <= 0){
     printf("ADC conversion timeout!\n");
   }
-  HAL_ADC_Stop_DMA(&hadc1);
-  HAL_ADC_Stop_DMA(&hadc2);
+  HAL_ADC_Stop_DMA(&hadcSple);
+  HAL_ADC_Stop_DMA(&hadcSpleSec);
   HAL_TIM_Base_Stop(&htim3);
   adc_status = ADC_NOT_FINISHED;
 }

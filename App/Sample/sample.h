@@ -7,13 +7,16 @@
 #include "arm_math.h"
 #include "VppFFTMeu.h"
 
+#define hadcSple hadc1
+#define hadcSpleSec hadc2
+
 //中断回调结束标志位 使用枚举变量
 typedef enum {
     ADC_FINISHED,    // ADC转换完成
     ADC_NOT_FINISHED // ADC转换未完成
 } ADC_Status_t;
 
-#define ADC_DMA_BUFFER_SIZE 1024 // DMA缓冲区大小
+#define ADC_DMA_BUFFER_SIZE FFT_SIZE // DMA缓冲区大小
 
 extern volatile uint16_t ADC1_Buffer[ADC_DMA_BUFFER_SIZE]; // ADC1数据缓冲区
 extern volatile uint16_t ADC2_Buffer[ADC_DMA_BUFFER_SIZE * 2]; // ADC2数据缓冲区
