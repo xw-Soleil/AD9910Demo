@@ -76,4 +76,11 @@ typedef struct {
 #define DC_OFFSET               2048     // Midpoint for 12-bit ADC/DAC (4096 / 2)
 #define USE_FLOAT_IIR           1        // 1 for float implementation (recommended), 0 for fixed-point
 
+
+
+/**
+ * @brief 硬件接口
+ */
+#define adciir hadc3
+
 #endif // APP_CONFIG_H

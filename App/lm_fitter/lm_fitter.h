@@ -1,0 +1,26 @@
+#ifndef LM_FITTER_H
+#define LM_FITTER_H
+
+#include "app_config.h"
+
+/**
+ * @brief Performs curve fitting using the Levenberg-Marquardt algorithm.
+ *
+ * This function takes measured data points, an initial guess for the parameters,
+ * and the filter type, then iteratively refines the parameters to minimize
+ * the difference between the model and the data.
+ *
+ * @param measured_data Pointer to the array of measurement data.
+ * @param num_points The number of points in the measured_data array.
+ * @param type The identified type of the filter to be fitted.
+ * @param params [in/out] Pointer to the filter parameters struct. It should contain
+ * the initial guess and will be updated with the fitted result.
+ */
+void LM_Fit(
+    const MeasurementPoint_t* measured_data,
+    int num_points,
+    FilterType_t type,
+    FilterParams_t* params
+);
+
+#endif // LM_FITTER_H

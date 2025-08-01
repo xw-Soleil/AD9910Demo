@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "dac.h"
 #include "dma.h"
 #include "tim.h"
 #include "usart.h"
@@ -33,11 +34,21 @@
 #include "sample.h"
 #include "hmi.h"
 #include "Correct.h"
+
+
+#include "app_config.h"
+#include "system_identification.h"
+#include "realtime_filter.h"
+#include "iir_filter_design.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+// Application mode to switch between identification and filtering
+typedef enum {
+    APP_MODE_IDENTIFICATION,
+    APP_MODE_FILTERING
+} AppMode_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -72,6 +83,10 @@ void SystemClock_Config(void);
 AccurateFFT_Handle fft_handle;      // FFT模块的句柄
 float32_t test_input_signal[FFT_SIZE]; // 输入信号缓冲区
 float32_t test_input_signal2[FFT_SIZE * 2]; // 输入信号缓冲区
+
+
+volatile AppMode_t g_app_mode = APP_MODE_IDENTIFICATION;
+
 //======================================================================================
 // 函数声明
 //======================================================================================
@@ -114,10 +129,14 @@ int main(void)
   MX_TIM3_Init();
   MX_UART4_Init();
   MX_ADC2_Init();
+  MX_DAC_Init();
+  MX_TIM2_Init();
+  MX_TIM6_Init();
+  MX_ADC3_Init();
   /* USER CODE BEGIN 2 */
-  HAL_Delay(100); // 确保所有外设初始化完成
-  VisualTFT_Init(); // 初始化串口屏
-  Init_AD9910(); // 初始化AD9910
+  // HAL_Delay(100); // 确保所有外设初始化完成
+  // VisualTFT_Init(); // 初始化串口屏
+  // Init_AD9910(); // 初始化AD9910
   // float32_t vpp = MeasureAdcInputVpp();
   // float32_t vppCorr = ADCSampleInputCorr(100, vpp);
 
@@ -139,10 +158,44 @@ int main(void)
   // DDSOutputCorrSamInBord(100, 2.0f);
 
   // SweepKnownBoardHs();
-  Init_AD9910();
-  AD9910_Set_Sine_Wave(1000, 16383 * 1.0f / MAX_DDS_VPP); // 设置正弦波频率为100kHz，幅度为16383（对应3.3V）
-  HAL_Delay(100); // 确保所有外设初始化完成
-  float32_t vpp = MeasureAdcInputVpp();
+  // Init_AD9910();
+  // AD9910_Set_Sine_Wave(1000, 16383 * 1.0f / MAX_DDS_VPP); // 设置正弦波频率为100kHz，幅度为16383（对应3.3V）
+  // HAL_Delay(100); // 确保所有外设初始化完成
+  // float32_t vpp = MeasureAdcInputVpp();
+
+  // --- STAGE 1: SYSTEM IDENTIFICATION ---
+  g_app_mode = APP_MODE_IDENTIFICATION;
+  SysId_Init();
+
+  while (!SysId_IsDone())
+  {
+    // The state machine is driven by interrupts and this loop
+    SysId_RunStateMachine();
+  }
+
+  // --- STAGE 2: REAL-TIME FILTERING ---
+  printf("\nSwitching to Real-Time Filter Mode...\n");
+  g_app_mode = APP_MODE_FILTERING;
+
+  // 1. Get the results from the identification stage
+  FilterParams_t fitted_params = SysId_GetFittedParams();
+  FilterType_t filter_type = SysId_GetFilterType();
+
+  // 2. Design the IIR filter using the identified parameters
+  BiquadCoeffs iir_coeffs;
+  // Note: The FilterType_t enum in iir_filter_design.h must match the one in app_config.h
+  design_biquad_filter(
+      (FilterType_t)filter_type, // Cast might be needed if enums differ
+      fitted_params.k,
+      fitted_params.f0,
+      fitted_params.q,
+      REALTIME_SAMPLING_RATE,
+      &iir_coeffs
+  );
+
+  // 3. Initialize and start the real-time filter module
+  RealtimeFilter_Init(&iir_coeffs);
+  RealtimeFilter_Start();
 
   /* USER CODE END 2 */
 
@@ -150,7 +203,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    VisualTFT_Poll();
+    // VisualTFT_Poll();
     // HAL_Delay(100); // 确保所有外设初始化完成
     /* USER CODE END WHILE */
 
@@ -182,7 +235,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = 8;
-  RCC_OscInitStruct.PLL.PLLN = 168;
+  RCC_OscInitStruct.PLL.PLLN = 160;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -224,6 +277,34 @@ void generate_test_signal(float32_t* p_buffer, uint16_t size)
     float32_t time_step = 1.0f / SAMPLING_RATE;
     for (int i = 0; i < size; i++) {
         p_buffer[i] = SIGNAL_AMPLITUDE * arm_sin_f32(2 * PI * SIGNAL_FREQUENCY * i * time_step);
+    }
+}
+
+
+// --- Top-Level Interrupt Service Routine Callbacks ---
+// These callbacks redirect to the appropriate module based on the current app mode.
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
+    if (g_app_mode == APP_MODE_IDENTIFICATION) {
+        SysId_ADCCallback();
+    } else { // APP_MODE_FILTERING
+        RealtimeFilter_ADCFullCpltCallback();
+    }
+}
+
+void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
+    if (g_app_mode == APP_MODE_FILTERING) {
+        RealtimeFilter_ADCHalfCpltCallback();
+    }
+    // No action in identification mode for half complete
+}
+// In main.c
+
+void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc) {
+    if (g_app_mode == APP_MODE_IDENTIFICATION) {
+        SysId_ADCErrorCallback(); // <--- 添加这一行
+    } else if (g_app_mode == APP_MODE_FILTERING) {
+        RealtimeFilter_ADCErrorCallback();
     }
 }
 /* USER CODE END 4 */

@@ -120,34 +120,34 @@ void SampleBothADC(void)
   adc_status = ADC_NOT_FINISHED;
 }
 
-/**
-  * @brief  Conversion complete callback.
-  * @param  hadc ADC handle
-  * @retval None
-  */
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
-{
-  if (hadc->Instance == ADC1) 
-  {
-    adc_status = ADC_FINISHED; // 设置ADC转换完成标志
-  }
-}
+// /**
+//   * @brief  Conversion complete callback.
+//   * @param  hadc ADC handle
+//   * @retval None
+//   */
+// void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+// {
+//   if (hadc->Instance == ADC1) 
+//   {
+//     adc_status = ADC_FINISHED; // 设置ADC转换完成标志
+//   }
+// }
 
-/**
-  * @brief  ADC error callback.
-  * @param  hadc ADC handle
-  * @retval None
-  */
-void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc)
-{
-    if(hadc->Instance == ADC1)
-    {
-        printf("ADC1 Error: %lu. Overrun: %s\n",
-               hadc->ErrorCode,
-               (hadc->ErrorCode & HAL_ADC_ERROR_OVR) ? "YES" : "NO");
-        // Error_Handler(); // Consider how to handle ADC errors robustly
-    }
-}
+// /**
+//   * @brief  ADC error callback.
+//   * @param  hadc ADC handle
+//   * @retval None
+//   */
+// void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc)
+// {
+//     if(hadc->Instance == ADC1)
+//     {
+//         printf("ADC1 Error: %lu. Overrun: %s\n",
+//                hadc->ErrorCode,
+//                (hadc->ErrorCode & HAL_ADC_ERROR_OVR) ? "YES" : "NO");
+//         // Error_Handler(); // Consider how to handle ADC errors robustly
+//     }
+// }
 void MeasureVppProcessData(){
   for(int i = 0; i < ADC_DMA_BUFFER_SIZE; i++) {
       // 将ADC1和ADC2的采样数据转换为浮点数
@@ -165,6 +165,10 @@ float32_t MeasureAdcInputVpp(void){
   AccurateFFT_Handle fft_handle_tmp;      // FFT模块的句柄
   SetTIMPeriod(&htim3, 1680-1); // 设置定时器周期为1000
   arm_status status = AccurateFFT_Init(&fft_handle_tmp, FFT_SIZE, 50000, WINDOW_TYPE_FLATTOP);
+  if(status != ARM_MATH_SUCCESS){
+    printf("FFT Init Error: %d\n", status);
+    return 0.0f; // 初始化失败，返回0
+  }
   adc_status = ADC_NOT_FINISHED; // 重置状态标志
   SampleADC_DMA(); // 采样ADC1数据
   MeasureVppProcessData(); // 处理采样数据
