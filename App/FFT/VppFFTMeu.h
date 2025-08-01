@@ -14,6 +14,7 @@
 #include "arm_math.h"
 #include <stdint.h>
 #include "main.h"
+#include "app_config.h"
 
 //======================================================================================
 // 公共宏定义和枚举

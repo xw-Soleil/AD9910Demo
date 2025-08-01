@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <float.h>
+#include "Correct.h"
+#include "AD9910.h"
 
 #include "adc.h"
 #include "dac.h"
@@ -91,7 +93,12 @@ void SysId_RunStateMachine(void) {
                 g_avg_sample_count = 0;
                 g_accumulated_gain = 0.0f;
                 
+                // start_sine_output(current_freq);
+#ifdef USE_DAC_OUTPUT
                 start_sine_output(current_freq);
+#else
+                DDSOutputCorrSamInBord(current_freq, DAC_AMP_DEFAULT);
+#endif
                 HAL_Delay(50);
                 
                 g_system_state = STATE_MEASURING;
@@ -99,7 +106,11 @@ void SysId_RunStateMachine(void) {
 
             } else {
                 stop_measurement();
+#ifdef USE_DAC_OUTPUT   
                 stop_sine_output();
+#else
+                DDS_Stop();
+#endif
                 printf("Sweep finished. Starting identification and fitting...\r\n");
                 g_system_state = STATE_IDENTIFY_AND_FIT;
             }

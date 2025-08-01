@@ -25,6 +25,9 @@
         "hmi_driver.h": "c",
         "cmd_process.h": "c",
         "cmd_queue.h": "c",
-        "hmi_user_uart.h": "c"
+        "hmi_user_uart.h": "c",
+        "lm_fitter.h": "c",
+        "string.h": "c",
+        "accurate_fft.h": "c"
     }
 }

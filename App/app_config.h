@@ -44,7 +44,7 @@ typedef struct {
 #define SINE_TABLE_SIZE         128
 #define DAC_VREF                3.3f
 #define DAC_MAX_VAL             4095
-#define DAC_AMP_DEFAULT         1.0f // DAC output peak-to-peak voltage
+#define DAC_AMP_DEFAULT         2.0f // DAC/DDS output peak-to-peak voltage
 
 // --- ADC/Measurement Defines ---
 #define ADC_BUFFER_SIZE         2048
@@ -76,7 +76,7 @@ typedef struct {
 #define DC_OFFSET               2048     // Midpoint for 12-bit ADC/DAC (4096 / 2)
 #define USE_FLOAT_IIR           1        // 1 for float implementation (recommended), 0 for fixed-point
 
-
+#define USE_DAC_OUTPUT
 
 /**
  * @brief 硬件接口

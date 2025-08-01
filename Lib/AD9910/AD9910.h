@@ -52,4 +52,7 @@ void AD9910_Set_Sine_Wave(u32 Freq, u16 Amp);
 void AD9910_AWG_Start(AD9910_WAVE_ENUM wave);
 void AD9910_AWG_Update_Freq_Phase(u32 freq_hz, u16 phase_degree);
 
+/* DDS停止 */
+void DDS_Stop(void);
+
 #endif

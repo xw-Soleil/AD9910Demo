@@ -92,7 +92,7 @@ void Error_Handler(void);
 //======================================================================================
 // 宏定义和常量
 //======================================================================================
-#define FFT_SIZE            1024
+#define FFT_SIZE            2048
 #define SAMPLING_RATE       1000000.0f
 #define SIGNAL_AMPLITUDE    2.0f
 #define SIGNAL_FREQUENCY    (100.5f * (SAMPLING_RATE / FFT_SIZE))
