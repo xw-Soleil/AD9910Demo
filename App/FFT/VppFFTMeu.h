@@ -67,6 +67,7 @@ typedef struct {
 
 } AccurateFFT_Handle;
 
+extern AccurateFFT_Handle g_my_fft_handle;
 
 //======================================================================================
 // 公共函数声明

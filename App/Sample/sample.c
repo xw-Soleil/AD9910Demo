@@ -162,17 +162,24 @@ void MeasureVppProcessData(){
   }
 }
 float32_t MeasureAdcInputVpp(void){
-  AccurateFFT_Handle fft_handle_tmp;      // FFT模块的句柄
-  SetTIMPeriod(&htim3, 1680-1); // 设置定时器周期为1000
-  arm_status status = AccurateFFT_Init(&fft_handle_tmp, FFT_SIZE, 50000, WINDOW_TYPE_FLATTOP);
-  if(status != ARM_MATH_SUCCESS){
-    printf("FFT Init Error: %d\n", status);
-    return 0.0f; // 初始化失败，返回0
+  static int initialized = 0;
+  uint32_t samplingRate =  50000; // 采样率50kHz
+  uint32_t timer_input_clock = HAL_RCC_GetPCLK1Freq() * 2;
+  uint32_t timer_period = (timer_input_clock / samplingRate) - 1; // 计算定时器周期
+  SetTIMPeriod(&htim3, timer_period); // 设置定时器周期
+  if(!initialized){
+    arm_status status = AccurateFFT_Init(&g_my_fft_handle, FFT_SIZE, 50000, WINDOW_TYPE_FLATTOP);
+    if(status != ARM_MATH_SUCCESS){
+      printf("FFT Init Error: %d\n", status);
+      return 0.0f; // 初始化失败，返回0
+    }
+  }else{
+    g_my_fft_handle.sampling_rate = samplingRate; // 更新采样率
   }
   adc_status = ADC_NOT_FINISHED; // 重置状态标志
   SampleADC_DMA(); // 采样ADC1数据
   MeasureVppProcessData(); // 处理采样数据
-  AccurateFFT_Measure(&fft_handle_tmp, adc_fft_buffer);
+  AccurateFFT_Measure(&g_my_fft_handle, adc_fft_buffer);
 
-  return fft_handle_tmp.result.corrected_amplitude * 2; // 返回Vpp值
+  return g_my_fft_handle.result.corrected_amplitude * 2; // 返回Vpp值
 }

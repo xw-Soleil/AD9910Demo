@@ -16,6 +16,8 @@
         "app_config.h": "c",
         "realtime_filter.h": "c",
         "system_identification.h": "c",
-        "utils.h": "c"
+        "utils.h": "c",
+        "adc.h": "c",
+        "stdlib.h": "c"
     }
 }

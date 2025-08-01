@@ -49,6 +49,14 @@ typedef enum {
     APP_MODE_IDENTIFICATION,
     APP_MODE_FILTERING
 } AppMode_t;
+
+typedef enum{
+  SYS_WAITING,  // 等待状态
+  SYS_BASIC_OUTPUT, // 基本要求输出
+  SYS_BASIC_HS_OUTPUT, // 基于已知模型的输出
+  SYS_PERFORMANCE_LEARN,  // 发挥部分学习
+  SYS_PERFORMANCE_OUTPUT
+} SysMode_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -86,6 +94,7 @@ float32_t test_input_signal2[FFT_SIZE * 2]; // 输入信号缓冲区
 
 
 volatile AppMode_t g_app_mode = APP_MODE_IDENTIFICATION;
+volatile SysMode_t g_sys_mode = SYS_BASIC_OUTPUT; // 系统模式
 
 //======================================================================================
 // 函数声明
