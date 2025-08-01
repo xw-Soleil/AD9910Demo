@@ -13,6 +13,7 @@
 
 #include "arm_math.h"
 #include <stdint.h>
+#include "main.h"
 
 //======================================================================================
 // 公共宏定义和枚举
@@ -23,6 +24,10 @@ typedef enum {
     WINDOW_TYPE_HANN
     // 可在此处添加其他窗函数类型
 } AccurateFFT_WindowType;
+
+extern float32_t g_window_coeffs[FFT_SIZE];
+extern float32_t g_fft_output[FFT_SIZE];
+extern float32_t g_fft_magnitude[FFT_SIZE / 2];
 
 
 //======================================================================================

@@ -4,6 +4,8 @@
 #include "main.h"
 #include "adc.h"
 #include "tim.h"
+#include "arm_math.h"
+#include "VppFFTMeu.h"
 
 //中断回调结束标志位 使用枚举变量
 typedef enum {
@@ -45,6 +47,8 @@ void SampleADC_DMA(void);
  * @note    注意：必须先配置好ADC和DMA，然后再调用此函数。
  */
 void SampleBothADC(void);
+
+float32_t MeasureAdcInputVpp(void);
 
 extern volatile ADC_Status_t adc_status;
 

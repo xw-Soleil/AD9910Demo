@@ -41,7 +41,8 @@ const u8 init_CFR3[] = {0x05, 0x0F, 0x41, 0x32};
 
 // 用于动态修改的RAM Profile 0 缓冲区
 u8 RAM_Profile0_buf[] = {0x00, 0x01, 0x03, 0xFF, 0x00, 0x00, 0x00, 0x24};
-
+// 【新增】用于DDS模式的Profile 0 缓冲区
+static u8 g_dds_profile_buf[8];
 /*-----------------------------------------------------------------------------------*/
 /*                              内部(私有)函数                                       */
 /*-----------------------------------------------------------------------------------*/
@@ -115,7 +116,7 @@ void Init_AD9910(void) {
 
 void AD9910_Set_Sine_Wave(u32 Freq, u16 Amp) {
     u32 ftw_val;
-    u8 profile_buf[8];
+    // u8 profile_buf[8];
     const u8 dds_mode_cfr1[] = {0x00, 0x00, 0x00, 0x00}; // DDS模式：RAM和DRG都禁用
 
     // 1. 写入CFR1，确保进入DDS模式
@@ -123,16 +124,20 @@ void AD9910_Set_Sine_Wave(u32 Freq, u16 Amp) {
 
     // 2. 准备频率和幅度数据
     if (Amp > 16383) Amp = 16383;
-    profile_buf[0] = (u8)(Amp >> 8);
-    profile_buf[1] = (u8)Amp;
+    // 【修改】使用全局缓冲区 g_dds_profile_buf
+    g_dds_profile_buf[0] = (u8)(Amp >> 8);
+    g_dds_profile_buf[1] = (u8)Amp;
+
     ftw_val = (u32)((double)Freq * 4.294967296);
-    profile_buf[7] = (u8)ftw_val;
-    profile_buf[6] = (u8)(ftw_val >> 8);
-    profile_buf[5] = (u8)(ftw_val >> 16);
-    profile_buf[4] = (u8)(ftw_val >> 24);
+    
+    g_dds_profile_buf[7] = (u8)ftw_val;
+    g_dds_profile_buf[6] = (u8)(ftw_val >> 8);
+    g_dds_profile_buf[5] = (u8)(ftw_val >> 16);
+    g_dds_profile_buf[4] = (u8)(ftw_val >> 24);
     
     // 3. 将数据写入Profile 0寄存器并更新
-    write_reg(0x0E, profile_buf, 8);
+    // 【修改】使用全局缓冲区 g_dds_profile_buf
+    write_reg(0x0E, g_dds_profile_buf, 8);
     io_update();
 }
 

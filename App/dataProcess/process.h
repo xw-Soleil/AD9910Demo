@@ -5,6 +5,7 @@
 /* ============================================================================ */
 #include "main.h"
 #include "arm_math.h"
+#include "AD9910.h"
 /* ============================================================================ */
 /*                                  变量声明                                     */
 /* ============================================================================ */
@@ -12,9 +13,31 @@ extern float32_t __COEFF_S2;
 extern float32_t __COEFF_S1;
 extern float32_t __NUMERATOR;
 
+// --- 查找表维度定义 ---
+#define FREQ_START      100.0f
+#define FREQ_STOP       3000.0f
+#define FREQ_STEP       100.0f
+#define FREQ_POINTS     30// 30
+
+#define VOUT_START      1.0f
+#define VOUT_STOP       2.0f
+#define VOUT_STEP       0.1f
+#define VOUT_POINTS     11 // 11
+
+// --- 校准过程控制参数 ---
+#define MAX_ITERATIONS         10
+#define TARGET_PRECISION_V     0.005f
+#define STABILIZE_DELAY_MS     20
+
+
 /* ============================================================================ */
 /*                                  函数声明                                     */
 /* ============================================================================ */
+
+/**
+ * @brief  [启动时调用] 通过迭代搜索，生成并填充2D查找表。
+ */
+void Generate_Vin_LUT_2D(void);
 
 
 /**
@@ -27,5 +50,7 @@ extern float32_t __NUMERATOR;
  * @retval 计算得出的所需输入电压峰峰值 (单位: V)。
  */
 float32_t VinVpp_KnownModel(float32_t VoutVpp, float32_t freqHz, float32_t coeff_s2, float32_t coeff_s1, float32_t numerator);
+
+void SetDacOutputVpp(float32_t vpp, float32_t freqHz);
 
 #endif /* __PROCESS_H__ */

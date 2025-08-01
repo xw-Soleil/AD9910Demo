@@ -7,6 +7,8 @@ volatile ADC_Status_t adc_status = ADC_NOT_FINISHED;
 volatile uint16_t ADC1_Buffer[ADC_DMA_BUFFER_SIZE]; // ADC1数据缓冲区
 volatile uint16_t ADC2_Buffer[ADC_DMA_BUFFER_SIZE * 2]; // ADC2数据缓冲区
 
+float32_t adc_fft_buffer[ADC_DMA_BUFFER_SIZE]; // 用于FFT处理的缓冲区
+
 /**
  * @brief   设置TIM的周期值
  * @param   period 定时器周期值 (0-65535)
@@ -145,4 +147,28 @@ void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc)
                (hadc->ErrorCode & HAL_ADC_ERROR_OVR) ? "YES" : "NO");
         // Error_Handler(); // Consider how to handle ADC errors robustly
     }
+}
+void MeasureVppProcessData(){
+  for(int i = 0; i < ADC_DMA_BUFFER_SIZE; i++) {
+      // 将ADC1和ADC2的采样数据转换为浮点数
+      adc_fft_buffer[i] = 3.3f * (float32_t)(ADC1_Buffer[i]) / 4095.0f; // 假设ADC分辨率为12位，参考电压为3.3V
+  }
+
+  // 使用Arm数学库进行去除直流偏置
+  float32_t mean_value;
+  arm_mean_f32(adc_fft_buffer, ADC_DMA_BUFFER_SIZE, &mean_value);
+  for(int i = 0; i < ADC_DMA_BUFFER_SIZE; i++) {
+      adc_fft_buffer[i] -= mean_value; // 去除直流偏置
+  }
+}
+float32_t MeasureAdcInputVpp(void){
+  AccurateFFT_Handle fft_handle_tmp;      // FFT模块的句柄
+  SetTIMPeriod(&htim3, 1680-1); // 设置定时器周期为1000
+  arm_status status = AccurateFFT_Init(&fft_handle_tmp, FFT_SIZE, 50000, WINDOW_TYPE_FLATTOP);
+  adc_status = ADC_NOT_FINISHED; // 重置状态标志
+  SampleADC_DMA(); // 采样ADC1数据
+  MeasureVppProcessData(); // 处理采样数据
+  AccurateFFT_Measure(&fft_handle_tmp, adc_fft_buffer);
+
+  return fft_handle_tmp.result.corrected_amplitude * 2; // 返回Vpp值
 }

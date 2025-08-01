@@ -32,6 +32,7 @@
 #include "VppFFTMeu.h"
 #include "sample.h"
 #include "hmi.h"
+#include "Correct.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -114,32 +115,35 @@ int main(void)
   MX_UART4_Init();
   MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
+  HAL_Delay(100); // 确保所有外设初始化完成
   VisualTFT_Init(); // 初始化串口屏
   Init_AD9910(); // 初始化AD9910
+  // float32_t vpp = MeasureAdcInputVpp();
+  // float32_t vppCorr = ADCSampleInputCorr(100, vpp);
 
-  printf("\r\n--- 精确FFT幅值测量程序 (模块化版本) ---\r\n");
+  // vpp = MeasureAdcInputVpp();
+  // vppCorr = ADCSampleInputCorr(300, vpp);
 
-  // 1. 初始化FFT模块
-  arm_status status = AccurateFFT_Init(&fft_handle, FFT_SIZE, SAMPLING_RATE, WINDOW_TYPE_FLATTOP);
-  if (status != ARM_MATH_SUCCESS) {
-      printf("FFT模块初始化失败! 错误码: %d\r\n", status);
-      while(1);
-  }
-  printf("FFT模块初始化成功!\r\n");
+  // vpp = MeasureAdcInputVpp();
+  // vppCorr = ADCSampleInputCorr(3000, vpp);
 
-  // 2. 生成测试信号
-  SampleADC_DMA();
-  // 处理ADC采样数据
-  ProcessADCData();
+  // vpp = MeasureAdcInputVpp();
+  // vppCorr = ADCSampleInputCorr(100000, vpp);
 
-  // 3. 执行测量
-  status = AccurateFFT_Measure(&fft_handle, test_input_signal);
-  if (status != ARM_MATH_SUCCESS) {
-      printf("FFT测量执行失败! 错误码: %d\r\n", status);
-      while(1);
-  }
+  // DDSOutputCorrSamInBord(100, 1.0f);
+  // DDSOutputCorrSamInBord(100, 1.1f);
+  // DDSOutputCorrSamInBord(100, 1.3f);
+  // DDSOutputCorrSamInBord(100, 1.5f);
+  // DDSOutputCorrSamInBord(100, 1.7f);
+  // DDSOutputCorrSamInBord(100, 1.9f);
+  // DDSOutputCorrSamInBord(100, 2.0f);
+
+  // SweepKnownBoardHs();
   Init_AD9910();
-  AD9910_Set_Sine_Wave(100000, 16383 * 3.3f / MAX_DDS_VPP); // 设置正弦波频率为100kHz，幅度为16383（对应3.3V）
+  AD9910_Set_Sine_Wave(1000, 16383 * 1.0f / MAX_DDS_VPP); // 设置正弦波频率为100kHz，幅度为16383（对应3.3V）
+  HAL_Delay(100); // 确保所有外设初始化完成
+  float32_t vpp = MeasureAdcInputVpp();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -147,6 +151,7 @@ int main(void)
   while (1)
   {
     VisualTFT_Poll();
+    // HAL_Delay(100); // 确保所有外设初始化完成
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
