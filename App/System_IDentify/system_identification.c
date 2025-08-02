@@ -12,9 +12,13 @@
 #include "adc.h"
 #include "dac.h"
 #include "dma.h"
+#include "process.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
+
+
+float getCorrectCoe(float target_freq);
 
 
 // --- Module-internal State Definition ---
@@ -99,7 +103,8 @@ void SysId_RunStateMachine(void) {
 #ifdef USE_DAC_OUTPUT
                 start_sine_output(current_freq);
 #else
-                DDSOutputCorrSamInBord(current_freq, DAC_AMP_DEFAULT);
+                //DDSOutputCorrSamInBord(current_freq, DAC_AMP_DEFAULT);
+                SetDacOutputVpp(3.0f, current_freq);
 #endif
                 HAL_Delay(50);
                 
@@ -213,9 +218,11 @@ void SysId_ADCErrorCallback(void) {
 // --- Private Function Implementations ---
 
 static void process_fft_results(void) {
+
+    float current_corr = getCorrectCoe(g_measured_data[g_current_sweep_index].frequency_hz);
     float32_t dc_offset = 0.0f;
     for (int i = 0; i < ADC_BUFFER_SIZE; i++) {
-        g_fft_input_buf[i] = ((float32_t)g_adc_buf[i] * ADC_VREF) / ADC_MAX_VAL;
+        g_fft_input_buf[i] = ((float32_t)g_adc_buf[i] * ADC_VREF) / ADC_MAX_VAL * current_corr;
         dc_offset += g_fft_input_buf[i];
     }
     dc_offset /= ADC_BUFFER_SIZE;
@@ -223,10 +230,13 @@ static void process_fft_results(void) {
         g_fft_input_buf[i] -= dc_offset;
     }
 
-    //校正:使用采样板
-    for (int i = 0; i < ADC_BUFFER_SIZE; i++) {
-        g_fft_input_buf[i] = ADCSampleInputCorr(g_measured_data[g_current_sweep_index].frequency_hz, g_fft_input_buf[i]);
-    }
+    // //校正:使用采样板
+    // for (int i = 0; i < ADC_BUFFER_SIZE; i++) {
+    //     g_fft_input_buf[i] = ADCSampleInputCorr(g_measured_data[g_current_sweep_index].frequency_hz, g_fft_input_buf[i]);
+    // }
+
+    //float current_corr = getCorrectCoe(g_measured_data[g_current_sweep_index].frequency_hz);
+    
 
 
 

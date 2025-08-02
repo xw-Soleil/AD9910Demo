@@ -22,6 +22,7 @@ static int findFreqIdx(float target_freq, float start_freq, float end_freq, int 
 // 1. 创建一个数组来存储对数间隔的频率点本身
 float32_t g_FrequencyPoints[SWLA_FREQ_NUMES_ASB] = {0};
 // 2. 创建一个数组来存储每个频率点对应的测量增益
+//adc采样比上dds输出
 float32_t g_MeasuredGains[SWLA_FREQ_NUMES_ASB] ={
     0.529423833, 0.537258923, 0.546774626, 0.557919562, 0.566783369, 0.575909078, 0.582748592, 0.591090739, 
     0.598039925, 0.606383741, 0.612548649, 0.619048536, 0.625235856, 0.630693018, 0.636016130, 0.641309321, 
@@ -53,6 +54,12 @@ float32_t g_GainsError[SWLA_FREQ_NUMES_ASB] = {0}; // 用于存储增益误差
 
 
 
+float getCorrectCoe(float target_freq) {
+    int index = findFreqIdx(target_freq, SWEEP_FREQ_START, SWEEP_FREQ_END, SWEEP_POINTS);
+    return g_MeasuredGains[index];
+}
+
+
 /**
  * @brief (第一步) 初始化频率数组，生成所有对数间隔的频率点。
  *        这个函数应该在系统启动时被调用一次。
@@ -76,7 +83,7 @@ void Initialize_Frequency_Array(void) {
 void SweepWholeLoopCorr(void) {
     Initialize_Frequency_Array();
     float32_t target_freq;
-    const float32_t target_vin = 3.0f; // 假设输入电压恒定为2.0V
+    const float32_t target_vin = 3.0f; // 假设输入电压恒定为3.0V
 
     float32_t vout_measurements[MAX_ITERATIONS]; // 用于存储多次测量结果
     float32_t mean_vout;
