@@ -1,6 +1,10 @@
 #include "realtime_filter.h"
 #include "main.h" // For HAL handles
 
+
+#define DAC_DECAY (0.798f)
+#define AD_DECAY (0.75f)
+
 // --- DMA Buffers ---
 static uint16_t adc_dma_buffer[PING_PONG_SIZE];
 static uint16_t dac_dma_buffer[PING_PONG_SIZE];
@@ -147,14 +151,14 @@ static uint16_t process_sample(uint16_t sample) {
 void RealtimeFilter_ADCHalfCpltCallback(void) {
     // Process the first half of the buffer (Ping)
     for (int i = 0; i < REALTIME_BUFFER_SIZE; i++) {
-        dac_dma_buffer[i] = process_sample(adc_dma_buffer[i]);
+        dac_dma_buffer[i] / DAC_DECAY = process_sample(adc_dma_buffer[i]) / AD_DECAY;
     }
 }
 
 void RealtimeFilter_ADCFullCpltCallback(void) {
     // Process the second half of the buffer (Pong)
     for (int i = 0; i < REALTIME_BUFFER_SIZE; i++) {
-        dac_dma_buffer[REALTIME_BUFFER_SIZE + i] = process_sample(adc_dma_buffer[REALTIME_BUFFER_SIZE + i]);
+        dac_dma_buffer[REALTIME_BUFFER_SIZE + i]  / DAC_DECAY = process_sample(adc_dma_buffer[REALTIME_BUFFER_SIZE + i]) / AD_DECAY;
     }
 }
 
