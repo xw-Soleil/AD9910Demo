@@ -13,7 +13,10 @@ typedef enum {
     ADC_NOT_FINISHED // ADC转换未完成
 } ADC_Status_t;
 
-#define ADC_DMA_BUFFER_SIZE 1024 // DMA缓冲区大小
+#define ADC_DMA_BUFFER_SIZE FFT_SIZE // DMA缓冲区大小
+
+#define hadcSamp hadc3
+#define htimSamp htim2
 
 extern volatile uint16_t ADC1_Buffer[ADC_DMA_BUFFER_SIZE]; // ADC1数据缓冲区
 extern volatile uint16_t ADC2_Buffer[ADC_DMA_BUFFER_SIZE * 2]; // ADC2数据缓冲区

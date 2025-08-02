@@ -5,6 +5,16 @@
         "realtime_filter.h": "c",
         "system_identification.h": "c",
         "iir_filter_design.h": "c",
-        "app_config.h": "c"
+        "app_config.h": "c",
+        "correct.h": "c",
+        "arm_math.h": "c",
+        "math.h": "c",
+        "utils.h": "c",
+        "screen.h": "c",
+        "ad9910.h": "c",
+        "main.h": "c",
+        "stdio.h": "c",
+        "hmi.h": "c",
+        "usart.h": "c"
     }
 }

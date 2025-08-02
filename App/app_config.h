@@ -35,11 +35,11 @@ typedef struct {
 
 // MODIFIED: Increased to 801 points to match the new algorithm's design.
 // The new, more complex algorithm performs best with a higher point density.
-#define SWEEP_POINTS            801
+#define SWEEP_POINTS            200
 
 // MODIFIED: Expanded sweep range to match the new algorithm's simulation range.
 #define SWEEP_FREQ_START        100.0f
-#define SWEEP_FREQ_END          200000.0f
+#define SWEEP_FREQ_END          200000.0f //注意,dac扫频只能到40k
 
 // --- DAC/Signal Generation Defines (Unchanged) ---
 #define SINE_TABLE_SIZE         128
@@ -77,7 +77,7 @@ typedef struct {
 // MODIFIED: REALTIME_SAMPLING_RATE might need adjustment for the wider sweep range.
 // Let's set it to handle up to 500kHz / 2.5 = 200kHz signals, e.g., 500kHz sampling.
 // This depends on your final real-time application needs.
-#define REALTIME_SAMPLING_RATE  300000.0f
+#define REALTIME_SAMPLING_RATE  800000.0f
 #define REALTIME_BUFFER_SIZE    128
 #define PING_PONG_SIZE          (REALTIME_BUFFER_SIZE * 2)
 #define DC_OFFSET               2048
@@ -87,6 +87,7 @@ typedef struct {
 // --- Hardware and Interface Defines (Unchanged) ---
 //==============================================================================
 #define USE_DDS_OUTPUT
+//#define USE_DAC_OUTPUT
 #define adciir hadc3
 
 #endif // APP_CONFIG_H

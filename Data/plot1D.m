@@ -4,7 +4,7 @@ clc;
 
 % --- 配置 ---
 % 重要：请将 'your_data_file.csv' 替换为您的实际文件名
-filename = 'AmpSampleBoard_OnlyVout.csv'; 
+filename = 'SampleInBoard.csv'; 
 array_name = 'myData1D';                  % 在C代码中生成的数组名
 variable_type = 'float';                  % 数组变量类型
 elements_per_line = 8;                    % C代码输出中每行元素的数量，用于格式化

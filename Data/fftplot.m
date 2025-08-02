@@ -2,7 +2,7 @@
 clear; clc; close all;
 
 % 读取CSV文件
-filename = 'adc1.csv';
+filename = 'dacSampleBoard.csv';
 data = readtable(filename);
 
 % 提取fft_magnitude_spectrum的数值

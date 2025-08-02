@@ -46,4 +46,9 @@ void SysId_ADCCallback(void);
 void SysId_ADCErrorCallback(void);
 
 
+void generate_sine_table(float peak_voltage);
+void start_sine_output(float frequency);
+void stop_sine_output(void);
+
+
 #endif // SYSTEM_IDENTIFICATION_H

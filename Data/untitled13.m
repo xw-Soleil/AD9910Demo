@@ -4,9 +4,9 @@
 clear; clc; close all;
 
 % --- 1. 从你的结果中提取拟合参数 ---
-k  = 0.9688;         % 增益 (Gain)
-f0 = 20.83;          % 中心频率 (Center Frequency in Hz)
-Q  = 0.0010;         % Q因子 (Q-Factor)
+k  = 0.9693;         % 增益 (Gain)
+f0 = 14820.58 ;          % 中心频率 (Center Frequency in Hz)
+Q  = 0.1364;         % Q因子 (Q-Factor)
 SSE = 3.395909e-01;  % 残差平方和 (Final SSE)
 
 % --- 2. 计算滤波器传递函数的参数 ---

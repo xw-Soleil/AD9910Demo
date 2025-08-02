@@ -50,9 +50,7 @@ static float32_t g_fft_input_buf2[ADC_BUFFER_SIZE*2];
 // --- Private Function Prototypes ---
 static void start_measurement(void);
 static void stop_measurement(void);
-static void generate_sine_table(float peak_voltage);
-static void start_sine_output(float frequency);
-static void stop_sine_output(void);
+
 static void process_fft_results(void);
 static void identify_and_fit(void);
 static const char* get_filter_type_string(FilterType_t type);
@@ -165,7 +163,6 @@ bool SysId_IsDone(void) {
     return g_system_state == STATE_DONE;
 }
 
-/////////
 
 
 // This function needs to be updated to return the new double-precision struct
@@ -226,6 +223,13 @@ static void process_fft_results(void) {
         g_fft_input_buf[i] -= dc_offset;
     }
 
+    //校正:使用采样板
+    for (int i = 0; i < ADC_BUFFER_SIZE; i++) {
+        g_fft_input_buf[i] = ADCSampleInputCorr(g_measured_data[g_current_sweep_index].frequency_hz, g_fft_input_buf[i]);
+    }
+
+
+
     if (AccurateFFT_Measure(&g_fft_handle, g_fft_input_buf) != ARM_MATH_SUCCESS) {
          printf("  -> FFT Measurement Failed!\r\n");
     } else {
@@ -265,7 +269,7 @@ static void identify_and_fit(void) {
 }
 
 
-static void generate_sine_table(float peak_voltage) {
+void generate_sine_table(float peak_voltage) {
     // ... (This function remains unchanged) ...
     uint16_t offset = DAC_MAX_VAL / 2;
     uint16_t amplitude = (uint16_t)((peak_voltage * DAC_MAX_VAL) / DAC_VREF);
@@ -277,7 +281,7 @@ static void generate_sine_table(float peak_voltage) {
     }
 }
 
-static void start_sine_output(float frequency) {
+void start_sine_output(float frequency) {
     uint32_t tim_clk = HAL_RCC_GetPCLK1Freq() * 2;
     uint32_t arr_val = (uint32_t)(tim_clk / (frequency * SINE_TABLE_SIZE)) - 1;
     __HAL_TIM_SET_AUTORELOAD(&htim6, arr_val);
@@ -285,7 +289,7 @@ static void start_sine_output(float frequency) {
     HAL_TIM_Base_Start(&htim6);
 }
 
-static void stop_sine_output() {
+void stop_sine_output() {
     HAL_TIM_Base_Stop(&htim6);
     HAL_DAC_Stop_DMA(&hdac, DAC_CHANNEL_1);
 }

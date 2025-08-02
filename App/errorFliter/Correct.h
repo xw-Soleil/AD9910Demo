@@ -18,6 +18,19 @@ extern float32_t CorrectVppParam; // 校正参数，初始值为1.0
 extern float32_t SweepKnownBoardHsArr[FREQ_NUMES_ASB][VOUT_NUMES_ASB];
 extern volatile uint32_t SweepKnownBoardHsFlag; // 用于标记是否完成采样板的扫频测量
 
+// --- 校准过程控制参数 ---
+#define MAX_ITERATIONS         10
+#define TARGET_PRECISION_V     0.005f
+#define STABILIZE_DELAY_MS     20
+
+#define DDS_START_FREQ 100.0f // 起始频率，单位kHz
+#define DDS_FREQ_STEP 100.0f // 频率步长，单位kHz
+#define DDS_FREQ_END 200000.0f
+#define DDS_FREQ_NUMES_ASB 2000 // 频率采样点数
+#define DDS_ITERATIONS 3 // 每个频率下的测量次数
+
+extern const float32_t SampleDDSBoardArr[DDS_FREQ_NUMES_ASB];
+
 /* ============================================================================ */
 /*                                函数声明                                     */
 /* ============================================================================ */
@@ -57,5 +70,18 @@ void SweepKnownBoardHs();
  * @brief 对于已知模型输出幅值校正，集成DDS输出
  */
 void KnownModelOutPutCorr(float32_t freqHz, float32_t vpp);
+
+
+/**
+ * @brief 扫频校准---全环路
+ */
+void SweepWholeLoopCorr();
+void SweepWholeLoopError(void);
+void SampleDDSBoardCorrError();
+void SampleDDSBoardCorr();
+void SampleInBoardCorr();
+void SampleInBoardError();
+void dacSampleBoardError();
+void dacSampleBoardCorr();
 
 #endif /* __CORRECT_H__ */
