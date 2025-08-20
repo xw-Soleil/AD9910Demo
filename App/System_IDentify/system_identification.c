@@ -222,7 +222,7 @@ static void process_fft_results(void) {
     float current_corr = getCorrectCoe(g_measured_data[g_current_sweep_index].frequency_hz);
     float32_t dc_offset = 0.0f;
     for (int i = 0; i < ADC_BUFFER_SIZE; i++) {
-        g_fft_input_buf[i] = ((float32_t)g_adc_buf[i] * ADC_VREF) / ADC_MAX_VAL * current_corr;
+        g_fft_input_buf[i] = ((float32_t)g_adc_buf[i] * ADC_VREF) / ADC_MAX_VAL / current_corr;
         dc_offset += g_fft_input_buf[i];
     }
     dc_offset /= ADC_BUFFER_SIZE;
@@ -243,7 +243,7 @@ static void process_fft_results(void) {
     if (AccurateFFT_Measure(&g_fft_handle, g_fft_input_buf) != ARM_MATH_SUCCESS) {
          printf("  -> FFT Measurement Failed!\r\n");
     } else {
-        float current_gain = g_fft_handle.result.corrected_amplitude / (DAC_AMP_DEFAULT / 2.0f);
+        float current_gain = g_fft_handle.result.corrected_amplitude / (3.0f/2); // Scale to 3.0V
         if (isinf(current_gain) || isnan(current_gain)) {
             current_gain = 0.0f;
         }

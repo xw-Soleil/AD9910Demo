@@ -2,6 +2,17 @@
 #include "main.h" // For HAL handles
 #include <stdint.h>
 
+
+
+
+#define USE_LINEAR
+#ifdef USE_LINEAR
+#define CORRECT  (1.7758f)
+#else
+#define CORRECT 1
+#endif
+
+
 // --- DMA Buffers ---
 static uint16_t adc_dma_buffer[PING_PONG_SIZE];
 static uint16_t dac_dma_buffer[PING_PONG_SIZE];
@@ -120,7 +131,7 @@ static uint16_t process_sample(uint16_t sample) {
     y_n2 = y_n1; y_n1 = y_n0;
     
     // Add DC offset back and clamp the output
-    float dac_output = y_n0 + (float)DC_OFFSET;
+    float dac_output = y_n0 * CORRECT + (float)DC_OFFSET;
     if (dac_output < 0.0f) dac_output = 0.0f;
     if (dac_output > 4095.0f) dac_output = 4095.0f;
     
@@ -191,7 +202,7 @@ void Correct_HSCorr_Init(void) {
     cy_n1 = cy_n2 = 0.0f;
 }
 
-#define USE_HS
+//#define USE_HS
 #ifdef USE_HS
 uint16_t apply_hs_corr(uint16_t sample) {
     float cx_n0 = (float)sample - (float)DC_OFFSET;
@@ -216,7 +227,5 @@ uint16_t apply_hs_corr(uint16_t sample) {
     return sample;
 }
 #endif // USE_HS
-
-
 
 

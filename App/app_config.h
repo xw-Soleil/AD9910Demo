@@ -77,7 +77,7 @@ typedef struct {
 // MODIFIED: REALTIME_SAMPLING_RATE might need adjustment for the wider sweep range.
 // Let's set it to handle up to 500kHz / 2.5 = 200kHz signals, e.g., 500kHz sampling.
 // This depends on your final real-time application needs.
-#define REALTIME_SAMPLING_RATE  800000.0f
+#define REALTIME_SAMPLING_RATE  500000.0f
 #define REALTIME_BUFFER_SIZE    128
 #define PING_PONG_SIZE          (REALTIME_BUFFER_SIZE * 2)
 #define DC_OFFSET               2048

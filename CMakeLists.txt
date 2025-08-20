@@ -1,25 +1,25 @@
 cmake_minimum_required(VERSION 3.22)
 
 #
-# è¿™ä¸ªæ–‡ä»¶ç»è¿‡ä¿®æ”¹ï¼Œå¯ä»¥è‡ªåŠ¨å‘çŽ°å¹¶æ·»åŠ ç”¨æˆ·è‡ªå·±çš„æºæ–‡ä»¶å’Œå¤´æ–‡ä»¶ã€‚
-# ç”± STM32CubeMX ç”Ÿæˆçš„æ–‡ä»¶å·²ç»é€šè¿‡å…¶è‡ªå¸¦çš„è„šæœ¬å¤„ç†ï¼Œæ— éœ€åœ¨æ­¤é‡å¤æ·»åŠ ã€‚
+# Õâ¸öÎÄ¼þ¾­¹ýÐÞ¸Ä£¬¿ÉÒÔ×Ô¶¯·¢ÏÖ²¢Ìí¼ÓÓÃ»§×Ô¼ºµÄÔ´ÎÄ¼þºÍÍ·ÎÄ¼þ¡£
+# ÓÉ STM32CubeMX Éú³ÉµÄÎÄ¼þÒÑ¾­Í¨¹ýÆä×Ô´øµÄ½Å±¾´¦Àí£¬ÎÞÐèÔÚ´ËÖØ¸´Ìí¼Ó¡£
 #
 
-# è®¾ç½®ç¼–è¯‘å™¨é€‰é¡¹
+# ÉèÖÃ±àÒëÆ÷Ñ¡Ïî
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
-# å®šä¹‰æž„å»ºç±»åž‹
+# ¶¨Òå¹¹½¨ÀàÐÍ
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
-# è®¾ç½®é¡¹ç›®åç§°
+# ÉèÖÃÏîÄ¿Ãû³Æ
 set(CMAKE_PROJECT_NAME H7Sampling)
 
-# --- 1. é¡¹ç›®å’Œè¯­è¨€é…ç½® ---
-# è‡ªåŠ¨ä»Žå½“å‰ç›®å½•åèŽ·å–é¡¹ç›®åç§°
+# --- 1. ÏîÄ¿ºÍÓïÑÔÅäÖÃ ---
+# ×Ô¶¯´Óµ±Ç°Ä¿Â¼Ãû»ñÈ¡ÏîÄ¿Ãû³Æ
 get_filename_component(CMAKE_PROJECT_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
 string(REGEX REPLACE "[^a-zA-Z0-9_]" "_" CMAKE_PROJECT_NAME ${CMAKE_PROJECT_NAME})
 set(CMAKE_PROJECT_NAME ${CMAKE_PROJECT_NAME})
@@ -33,48 +33,48 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 project(${CMAKE_PROJECT_NAME})
 message("Build Type: " ${CMAKE_BUILD_TYPE})
 
-# å¯ç”¨ CMake å¯¹ ASM å’Œ C è¯­è¨€çš„æ”¯æŒ
+# ÆôÓÃ CMake ¶Ô ASM ºÍ C ÓïÑÔµÄÖ§³Ö
 enable_language(C ASM)
 
-# åˆ›å»ºä¸€ä¸ªå¯æ‰§è¡Œæ–‡ä»¶ç›®æ ‡
-add_executable(${CMAKE_PROJECT_NAME} "") # æºæ–‡ä»¶å°†åœ¨åŽé¢æ·»åŠ 
+# ´´½¨Ò»¸ö¿ÉÖ´ÐÐÎÄ¼þÄ¿±ê
+add_executable(${CMAKE_PROJECT_NAME} "") # Ô´ÎÄ¼þ½«ÔÚºóÃæÌí¼Ó
 
-# æ·»åŠ  STM32CubeMX ç”Ÿæˆçš„æºä»£ç 
-# æ­¤å‘½ä»¤ä¼šè‡ªåŠ¨å¤„ç† Core å’Œ Drivers ç›®å½•ä¸­ç”± CubeMX ç”Ÿæˆçš„æ‰€æœ‰æ–‡ä»¶
+# Ìí¼Ó STM32CubeMX Éú³ÉµÄÔ´´úÂë
+# ´ËÃüÁî»á×Ô¶¯´¦Àí Core ºÍ Drivers Ä¿Â¼ÖÐÓÉ CubeMX Éú³ÉµÄËùÓÐÎÄ¼þ
 add_subdirectory(cmake/stm32cubemx)
 
-# --- è‡ªåŠ¨åŒ–æ·»åŠ ç”¨æˆ·è‡ªå®šä¹‰æ–‡ä»¶è„šæœ¬ ---
+# --- ×Ô¶¯»¯Ìí¼ÓÓÃ»§×Ô¶¨ÒåÎÄ¼þ½Å±¾ ---
 
 
-# --- 2. MCU å’Œåº“é…ç½® ---
-# !!! ç”¨æˆ·é…ç½®: åœ¨è¿™é‡Œé€‰æ‹©æ‚¨çš„ MCU ç³»åˆ— !!!
-# è®¾ç½®ä¸º ON ä»¥ä½¿ç”¨ H7 ç³»åˆ—çš„é…ç½®, è®¾ç½®ä¸º OFF ä»¥ä½¿ç”¨ F4 ç³»åˆ—çš„é…ç½®ã€‚
+# --- 2. MCU ºÍ¿âÅäÖÃ ---
+# !!! ÓÃ»§ÅäÖÃ: ÔÚÕâÀïÑ¡ÔñÄúµÄ MCU ÏµÁÐ !!!
+# ÉèÖÃÎª ON ÒÔÊ¹ÓÃ H7 ÏµÁÐµÄÅäÖÃ, ÉèÖÃÎª OFF ÒÔÊ¹ÓÃ F4 ÏµÁÐµÄÅäÖÃ¡£
 option(MCU_FAMILY_H7 "Configure for STM32H7 series" OFF)
 
 if(MCU_FAMILY_H7)
     message(STATUS "Configuring for STM32H7 series")
-    # H7 ç³»åˆ— (å¦‚ H743) ä½¿ç”¨ Cortex-M7 å†…æ ¸å’ŒåŒç²¾åº¦ FPU
-    # åº“å: libarm_cortexM7lfd_math.a
+    # H7 ÏµÁÐ (Èç H743) Ê¹ÓÃ Cortex-M7 ÄÚºËºÍË«¾«¶È FPU
+    # ¿âÃû: libarm_cortexM7lfd_math.a
     set(CMSIS_DSP_LIB "arm_cortexM7lfdp_math")
 else()
     message(STATUS "Configuring for STM32F4 series")
-    # F4 ç³»åˆ— (å¦‚ F407) ä½¿ç”¨ Cortex-M4 å†…æ ¸å’Œå•ç²¾åº¦ FPU
-    # åº“å: libarm_cortexM4lf_math.a
+    # F4 ÏµÁÐ (Èç F407) Ê¹ÓÃ Cortex-M4 ÄÚºËºÍµ¥¾«¶È FPU
+    # ¿âÃû: libarm_cortexM4lf_math.a
     set(CMSIS_DSP_LIB "arm_cortexM4lf_math")
 endif()
 
 
-# åœ¨è¿™é‡Œå®šä¹‰æ‚¨è‡ªå·±åˆ›å»ºçš„ä»£ç æ–‡ä»¶å¤¹ã€‚
-# !!! é‡è¦ !!!: ä¸è¦å°† "Core" æˆ– "Drivers" æ·»åŠ åˆ°æ­¤åˆ—è¡¨ï¼Œ
-# å› ä¸ºå®ƒä»¬å·²ç”±ä¸Šé¢çš„ add_subdirectory å‘½ä»¤å¤„ç†ã€‚
+# ÔÚÕâÀï¶¨ÒåÄú×Ô¼º´´½¨µÄ´úÂëÎÄ¼þ¼Ð¡£
+# !!! ÖØÒª !!!: ²»Òª½« "Core" »ò "Drivers" Ìí¼Óµ½´ËÁÐ±í£¬
+# ÒòÎªËüÃÇÒÑÓÉÉÏÃæµÄ add_subdirectory ÃüÁî´¦Àí¡£
 set(USER_FOLDERS
-    # ä¾‹å¦‚: å¦‚æžœæ‚¨åˆ›å»ºäº†ä¸€ä¸ª "App" æ–‡ä»¶å¤¹æ¥å­˜æ”¾æ‚¨çš„åº”ç”¨ä»£ç ï¼Œ
-    # å°±åœ¨è¿™é‡Œæ·»åŠ å®ƒ: "App"
+    # ÀýÈç: Èç¹ûÄú´´½¨ÁËÒ»¸ö "App" ÎÄ¼þ¼ÐÀ´´æ·ÅÄúµÄÓ¦ÓÃ´úÂë£¬
+    # ¾ÍÔÚÕâÀïÌí¼ÓËü: "App"
     "App" 
     "Lib"
 )
 
-# åˆå§‹åŒ–ç”¨æˆ·æºæ–‡ä»¶å’Œå¤´æ–‡ä»¶ç›®å½•åˆ—è¡¨
+# ³õÊ¼»¯ÓÃ»§Ô´ÎÄ¼þºÍÍ·ÎÄ¼þÄ¿Â¼ÁÐ±í
 set(USER_SOURCES)
 set(USER_INCLUDE_DIRS)
 
@@ -85,16 +85,16 @@ foreach(FOLDER ${USER_FOLDERS})
         continue()
     endif()
 
-    # **ä¿®æ­£ 1: çœŸæ­£é€’å½’æœç´¢æ‰€æœ‰ .c æ–‡ä»¶**
-    # åœ¨æŒ‡å®šçš„ç”¨æˆ·æ–‡ä»¶å¤¹ä¸‹é€’å½’æŸ¥æ‰¾æ‰€æœ‰ .c æ–‡ä»¶ï¼Œæ— è®ºå®ƒä»¬åœ¨å¤šæ·±çš„å­ç›®å½•ä¸­ã€‚
+    # **ÐÞÕý 1: ÕæÕýµÝ¹éËÑË÷ËùÓÐ .c ÎÄ¼þ**
+    # ÔÚÖ¸¶¨µÄÓÃ»§ÎÄ¼þ¼ÐÏÂµÝ¹é²éÕÒËùÓÐ .c ÎÄ¼þ£¬ÎÞÂÛËüÃÇÔÚ¶àÉîµÄ×ÓÄ¿Â¼ÖÐ¡£
     file(GLOB_RECURSE FOLDER_SOURCES "${FOLDER_PATH}/*.c")
     if(FOLDER_SOURCES)
         list(APPEND USER_SOURCES ${FOLDER_SOURCES})
         message(STATUS "  - Found source files in '${FOLDER}': ${FOLDER_SOURCES}")
     endif()
 
-    # **ä¿®æ­£ 2: çœŸæ­£é€’å½’æœç´¢æ‰€æœ‰åŒ…å«å¤´æ–‡ä»¶çš„ç›®å½•**
-    # æŸ¥æ‰¾æ‰€æœ‰ .h æ–‡ä»¶ï¼Œç„¶åŽèŽ·å–å®ƒä»¬æ‰€åœ¨çš„ç›®å½•ï¼Œå¹¶æ·»åŠ åˆ°åŒ…å«è·¯å¾„ä¸­ã€‚
+    # **ÐÞÕý 2: ÕæÕýµÝ¹éËÑË÷ËùÓÐ°üº¬Í·ÎÄ¼þµÄÄ¿Â¼**
+    # ²éÕÒËùÓÐ .h ÎÄ¼þ£¬È»ºó»ñÈ¡ËüÃÇËùÔÚµÄÄ¿Â¼£¬²¢Ìí¼Óµ½°üº¬Â·¾¶ÖÐ¡£
     file(GLOB_RECURSE FOLDER_HEADERS "${FOLDER_PATH}/*.h")
     if(FOLDER_HEADERS)
         foreach(HEADER_FILE ${FOLDER_HEADERS})
@@ -104,7 +104,7 @@ foreach(FOLDER ${USER_FOLDERS})
     endif()
 endforeach()
 
-# ç§»é™¤é‡å¤çš„å¤´æ–‡ä»¶è·¯å¾„ï¼Œä¿æŒæ•´æ´
+# ÒÆ³ýÖØ¸´µÄÍ·ÎÄ¼þÂ·¾¶£¬±£³ÖÕû½à
 if(USER_INCLUDE_DIRS)
     list(REMOVE_DUPLICATES USER_INCLUDE_DIRS)
     message(STATUS "  - Added user include paths: ${USER_INCLUDE_DIRS}")
@@ -112,59 +112,59 @@ endif()
 
 
 
-# --- è‡ªåŠ¨åŒ–è„šæœ¬ç»“æŸ ---
+# --- ×Ô¶¯»¯½Å±¾½áÊø ---
 
 
-# å°†ç”¨æˆ·è‡ªå®šä¹‰çš„æºæ–‡ä»¶æ·»åŠ åˆ°å¯æ‰§è¡Œæ–‡ä»¶ä¸­
+# ½«ÓÃ»§×Ô¶¨ÒåµÄÔ´ÎÄ¼þÌí¼Óµ½¿ÉÖ´ÐÐÎÄ¼þÖÐ
 if(USER_SOURCES)
     target_sources(${CMAKE_PROJECT_NAME} PRIVATE
         ${USER_SOURCES}
     )
 endif()
 
-# æ·»åŠ ç”¨æˆ·è‡ªå®šä¹‰çš„å¤´æ–‡ä»¶è·¯å¾„
+# Ìí¼ÓÓÃ»§×Ô¶¨ÒåµÄÍ·ÎÄ¼þÂ·¾¶
 if(USER_INCLUDE_DIRS)
     target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
         ${USER_INCLUDE_DIRS}
     )
 endif()
 
-# æ·»åŠ é¡¹ç›®ç¬¦å· (å®å®šä¹‰)
+# Ìí¼ÓÏîÄ¿·ûºÅ (ºê¶¨Òå)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
-    # åœ¨è¿™é‡Œæ·»åŠ ç”¨æˆ·è‡ªå®šä¹‰çš„ç¬¦å·
+    # ÔÚÕâÀïÌí¼ÓÓÃ»§×Ô¶¨ÒåµÄ·ûºÅ
 )
 
-# ç§»é™¤åœ¨ä½¿ç”¨ cpp æ–‡ä»¶æ—¶é”™è¯¯çš„ libob.a åº“ä¾èµ–
+# ÒÆ³ýÔÚÊ¹ÓÃ cpp ÎÄ¼þÊ±´íÎóµÄ libob.a ¿âÒÀÀµ
 list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 
 
-# é“¾æŽ¥æ‰€æœ‰éœ€è¦çš„åº“
+# Á´½ÓËùÓÐÐèÒªµÄ¿â
 target_link_libraries(${CMAKE_PROJECT_NAME} 
-    ${CMSIS_DSP_LIB} # é“¾æŽ¥æ ¹æ® MCU é€‰æ‹©çš„ CMSIS-DSP åº“
-    m                # é“¾æŽ¥æ ‡å‡†æ•°å­¦åº“ (ä¾‹å¦‚ sin, cos, sqrt)
+    ${CMSIS_DSP_LIB} # Á´½Ó¸ù¾Ý MCU Ñ¡ÔñµÄ CMSIS-DSP ¿â
+    m                # Á´½Ó±ê×¼ÊýÑ§¿â (ÀýÈç sin, cos, sqrt)
 )
 
-# ä¸º printf å¯ç”¨æµ®ç‚¹æ•°æ”¯æŒ
+# Îª printf ÆôÓÃ¸¡µãÊýÖ§³Ö
 target_link_options(${CMAKE_PROJECT_NAME} PRIVATE "-Wl,-u_printf_float")
 
 
 
-# è®¾ç½®é“¾æŽ¥å™¨æœç´¢ç›®å½•
+# ÉèÖÃÁ´½ÓÆ÷ËÑË÷Ä¿Â¼
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/ST/ARM/DSP/Lib
 )
 
 
-# --- 7. åŽæœŸæž„å»ºæ­¥éª¤ ---
-# å®šä¹‰è¾“å‡ºçš„ .hex å’Œ .bin æ–‡ä»¶è·¯å¾„
+# --- 7. ºóÆÚ¹¹½¨²½Öè ---
+# ¶¨ÒåÊä³öµÄ .hex ºÍ .bin ÎÄ¼þÂ·¾¶
 set(HEX_FILE ${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.hex)
 set(BIN_FILE ${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.bin)
 
-# æ·»åŠ è‡ªå®šä¹‰å‘½ä»¤, åœ¨æž„å»ºå®ŒæˆåŽç”Ÿæˆ .hex å’Œ .bin æ–‡ä»¶
+# Ìí¼Ó×Ô¶¨ÒåÃüÁî, ÔÚ¹¹½¨Íê³ÉºóÉú³É .hex ºÍ .bin ÎÄ¼þ
 add_custom_command(
     TARGET ${CMAKE_PROJECT_NAME}
     POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} -Oihex $<TARGET_FILE:${CMAKE_PROJECT_NAME}> ${HEX_FILE}
     COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${CMAKE_PROJECT_NAME}> ${BIN_FILE}
-    COMMENT "æ­£åœ¨ç”Ÿæˆ ${HEX_FILE} å’Œ ${BIN_FILE}..."
+    COMMENT "ÕýÔÚÉú³É ${HEX_FILE} ºÍ ${BIN_FILE}..."
 )

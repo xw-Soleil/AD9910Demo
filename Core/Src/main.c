@@ -95,6 +95,12 @@ volatile SysMode_t sys_mode = SYS_BASIC_OUTPUT; // ????
 //======================================================================================
 void generate_test_signal(float32_t* p_buffer, uint16_t size);
 void ProcessADCData();
+
+
+void set2to1Mode(uint8_t sel) {
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, sel ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -140,10 +146,10 @@ int main(void)
   // HAL_Delay(100); // ??????????????????
   VisualTFT_Init(); // ???????????
   Init_AD9910(); // ?????AD9910
-  AD9910_Set_Sine_Wave(1000, 16383 * 1.0f / MAX_DDS_VPP);
-  DDSOutputCorrSamInBord(100, 2.0f);
-  dacSampleBoardCorr();
-  dacSampleBoardError();
+//   AD9910_Set_Sine_Wave(1000, 16383 * 1.0f / MAX_DDS_VPP);
+//   DDSOutputCorrSamInBord(1000, 2.0f);
+//   dacSampleBoardCorr();
+//   dacSampleBoardError();
   
 //   SampleInBoardCorr();
 //   SampleInBoardError();
@@ -183,7 +189,7 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  static SysMode_t previous_sys_mode = SYS_WAITING; // ????????????��???????
+  static SysMode_t previous_sys_mode = SYS_WAITING; // ?????????????????????
   static int filter_initialized = 0; // ????????????? initialized ???
 
   while (1)
@@ -194,9 +200,9 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     // ==============================================================================
-    // ???????????��????
+    // ?????????????????
     // ==============================================================================
-    // ??��???????????????????????????
+    // ???????????????????????????????
     if (sys_mode != previous_sys_mode)
     {
         // --- a. ?????????????????? ---
@@ -212,42 +218,45 @@ int main(void)
         switch (sys_mode)
         {
             case SYS_PERFORMANCE_LEARN:
+                set2to1Mode(0);
                 g_app_mode = APP_MODE_IDENTIFICATION;
                 SysId_Init(); // ??????LEARN???????????
                 printf("Entering LEARN mode, SysId initialized.\n");
                 break;
 
             case SYS_PERFORMANCE_LEARN_DONE:
+                
                 FilterType_t filter_type = SysId_GetFinalFilterType(); // ?????????????????
                 if(filter_type == FILTER_TYPE_LPF) {
-                    SendText(4, 4, "��ͨ");
+                    SendText(4, 4, "��ͨ�˲���");
                 }
                 else if(filter_type == FILTER_TYPE_HPF) {
-                    SendText(4, 4, "��ͨ");
+                    SendText(4, 4, "��ͨ�˲���");
                 }
                 else if(filter_type == FILTER_TYPE_BPF) {
-                    SendText(4, 4, "��ͨ");
+                    SendText(4, 4, "��ͨ�˲���");
                 }
                 else if(filter_type == FILTER_TYPE_BSF) {
-                    SendText(4, 4, "����");
+                    SendText(4, 4, "�����˲���");
                 }
                 else {
-                    SendText(4, 4, "δ֪�˲���");
+                    SendText(4, 4, "");
                 }
                 break;
             case SYS_PERFORMANCE_OUTPUT:
+                set2to1Mode(1);
                 if (!filter_initialized) // ????????????
                 {
                     printf("Entering OUTPUT mode, configuring filter...\n");
                     g_app_mode = APP_MODE_FILTERING;
                     
-                    //FilterParams_t_double fitted_params = SysId_GetFittedParams();
-                    FilterParams_t_double fitted_params;
-                    fitted_params.k = 0.9688;
-                    fitted_params.w0 = 2*PI * 20.83; // 20.83 Hz
-                    fitted_params.q = 0.0010;
-                    FilterType_t filter_type = FILTER_TYPE_BPF;
-                    //FilterType_t filter_type = SysId_GetPreliminaryFilterType(); // ????
+                    FilterParams_t_double fitted_params = SysId_GetFittedParams();
+                    // FilterParams_t_double fitted_params;
+                    // fitted_params.k = 0.9688;
+                    // fitted_params.w0 = 2*PI * 20.83; // 20.83 Hz
+                    // fitted_params.q = 0.0010;
+                    // FilterType_t filter_type = FILTER_TYPE_BPF;
+                    FilterType_t filter_type = SysId_GetPreliminaryFilterType(); // ????
                     BiquadCoeffs iir_coeffs;
 
                     design_biquad_filter(
@@ -274,13 +283,13 @@ int main(void)
                 break;
         }
 
-        // --- c. ???????????????��?? ---
+        // --- c. ??????????????????? ---
         previous_sys_mode = sys_mode;
     }
 
 
     // ==============================================================================
-    // ??????????????????????????????��?
+    // ?????????????????????????????????
     // ==============================================================================
     if (sys_mode == SYS_PERFORMANCE_LEARN)
     {
@@ -292,9 +301,9 @@ int main(void)
         }
         else
         {
-            // ?????????????��??????????
+            // ?????????????????????????
             printf("\nSystem Identification complete!\n");
-            sys_mode = SYS_PERFORMANCE_LEARN_DONE; // ????��??????????
+            sys_mode = SYS_PERFORMANCE_LEARN_DONE; // ????????????????
         }
     }
     
@@ -352,7 +361,7 @@ void SystemClock_Config(void)
 void ProcessADCData(){
   for(int i = 0; i < ADC_DMA_BUFFER_SIZE; i++) {
       // ??ADC1??ADC2???????????????????
-      test_input_signal[i] = 3.3f * (float32_t)(ADC1_Buffer[i]) / 4095.0f; // ????ADC??????12��???��?????3.3V
+      test_input_signal[i] = 3.3f * (float32_t)(ADC1_Buffer[i]) / 4095.0f; // ????ADC??????12????????????3.3V
   }
 
   // ???Arm?????????????????
