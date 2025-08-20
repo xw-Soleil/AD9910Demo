@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceRoot}/build/Debug/MY25guosai.elf",
+            "name": "Debug with ST-Link",
+            "request": "launch",
+            "type": "cortex-debug",
+            "runToEntryPoint": "main",
+            "showDevDebugOutput": "none",
+            "servertype": "openocd",
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32f4x.cfg"
+            ],
+            "svdFile": "${workspaceRoot}/STM32F4.svd",
+            "miDebuggerArgs": "-x .gdbinit"
+            // // 错误的部分：移除顶层的 "setupCommands"
+            
+            // // 正确的部分：使用 "gdbTarget" 来执行GDB命令
+            // "gdbTarget": "localhost:3333", // OpenOCD 默认的 GDB 服务器端口
+            // "gdbPath" : "C:/Program Files/arm-gnu-toolchain-14.2/bin/arm-none-eabi-gdb.exe", // 确保 GDB 路径正确
+            // "gdbCommands": [
+            //     // 你想执行的命令放在这里
+            //     "source ${workspaceFolder}/gdb_visualizer.py"
+            // ]
+        }
+    ]
+}

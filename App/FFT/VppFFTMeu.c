@@ -45,9 +45,9 @@ arm_status AccurateFFT_Init(AccurateFFT_Handle* p_handle, uint16_t fft_size, flo
     // 2. 为内部缓冲区分配内存
     // 注意: 在实际嵌入式项目中，您可能更倾向于使用静态分配的全局数组而非malloc
 
-   p_handle->p_window_coeffs = (float32_t*)malloc(fft_size * sizeof(float32_t));
-    p_handle->p_fft_output = (float32_t*)malloc(fft_size * sizeof(float32_t));
-    p_handle->p_fft_magnitude = (float32_t*)malloc((fft_size / 2) * sizeof(float32_t));
+   p_handle->p_window_coeffs = g_window_coeffs;
+    p_handle->p_fft_output = g_fft_output;
+    p_handle->p_fft_magnitude = g_fft_magnitude;
     if (p_handle->p_window_coeffs == NULL || p_handle->p_fft_output == NULL || p_handle->p_fft_magnitude == NULL) {
         // 内存分配失败
         return ARM_MATH_TEST_FAILURE;

@@ -14,6 +14,7 @@
 #include "arm_math.h"
 #include <stdint.h>
 #include "main.h"
+#include "app_config.h"
 
 //======================================================================================
 // 公共宏定义和枚举
@@ -67,6 +68,7 @@ typedef struct {
 
 } AccurateFFT_Handle;
 
+extern AccurateFFT_Handle g_my_fft_handle;
 
 //======================================================================================
 // 公共函数声明

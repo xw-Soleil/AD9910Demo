@@ -1,4 +1,5 @@
 #include "process.h"
+#include "Correct.h"
 #include "sample.h"
 #include "arm_math.h"
 #include "stdint.h"
@@ -18,7 +19,7 @@ static volatile uint8_t g_is_lut_populated = 0; // volatile防止编译器优化
 
 
 void SetDacOutputVpp(float32_t vpp, float32_t freqHz){
-    AD9910_Set_Sine_Wave(freqHz * 1000.0f, 16383 *vpp  / MAX_DDS_VPP); // 设置正弦波频率为100kHz，幅度为16383（对应3.3V）
+    AD9910_Set_Sine_Wave(freqHz, 16383 *vpp  / MAX_DDS_VPP); // 设置正弦波频率为100kHz，幅度为16383（对应3.3V）
 }
 
 void Delay_ms(uint32_t ms){

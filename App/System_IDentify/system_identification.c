@@ -1,17 +1,24 @@
 #include "system_identification.h"
-#include "lm_fitter.h"
+#include "expert_fitter_double.h"
 #include "accurate_fft.h"
 #include "main.h"
 #include <stdio.h>
 #include <string.h>
 #include <float.h>
+#include "Correct.h"
+#include "AD9910.h"
+#include "app_config.h"
 
 #include "adc.h"
 #include "dac.h"
 #include "dma.h"
+#include "process.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
+
+
+float getCorrectCoe(float target_freq);
 
 
 // --- Module-internal State Definition ---
@@ -31,8 +38,11 @@ static uint16_t g_adc_buf[ADC_BUFFER_SIZE];
 static MeasurementPoint_t g_measured_data[SWEEP_POINTS];
 static uint32_t g_current_sweep_index = 0;
 
-static FilterParams_t g_fitted_params;
-static FilterType_t g_identified_type = FILTER_TYPE_UNKNOWN;
+
+///////////////////////////////////////////
+// This single struct will hold all results: params, SSE, and both filter types.
+static ExpertFitResult_t_double g_fit_result; 
+////////////////////////////////////////////
 
 static volatile uint32_t g_avg_sample_count = 0;
 static float g_accumulated_gain = 0.0f;
@@ -44,9 +54,7 @@ static float32_t g_fft_input_buf2[ADC_BUFFER_SIZE*2];
 // --- Private Function Prototypes ---
 static void start_measurement(void);
 static void stop_measurement(void);
-static void generate_sine_table(float peak_voltage);
-static void start_sine_output(float frequency);
-static void stop_sine_output(void);
+
 static void process_fft_results(void);
 static void identify_and_fit(void);
 static const char* get_filter_type_string(FilterType_t type);
@@ -91,7 +99,13 @@ void SysId_RunStateMachine(void) {
                 g_avg_sample_count = 0;
                 g_accumulated_gain = 0.0f;
                 
+                // start_sine_output(current_freq);
+#ifdef USE_DAC_OUTPUT
                 start_sine_output(current_freq);
+#else
+                //DDSOutputCorrSamInBord(current_freq, DAC_AMP_DEFAULT);
+                SetDacOutputVpp(3.0f, current_freq);
+#endif
                 HAL_Delay(50);
                 
                 g_system_state = STATE_MEASURING;
@@ -99,7 +113,11 @@ void SysId_RunStateMachine(void) {
 
             } else {
                 stop_measurement();
+#ifdef USE_DAC_OUTPUT   
                 stop_sine_output();
+#else
+                DDS_Stop();
+#endif
                 printf("Sweep finished. Starting identification and fitting...\r\n");
                 g_system_state = STATE_IDENTIFY_AND_FIT;
             }
@@ -120,11 +138,20 @@ void SysId_RunStateMachine(void) {
             identify_and_fit();
             printf("========================================\r\n");
             printf("Identification and Fitting Complete!\r\n");
-            printf("Identified Filter Type: %s\r\n", get_filter_type_string(g_identified_type));
-            printf("Fitted Parameters:\r\n");
-            printf("  k  (Gain)    : %.4f\r\n", g_fitted_params.k);
-            printf("  f0 (Freq)    : %.2f Hz\r\n", g_fitted_params.f0);
-            printf("  Q  (Q-Factor): %.4f\r\n", g_fitted_params.q);
+            
+            // Print the two different filter types as requested
+            printf("1. Preliminary Type (from fit): %s\r\n", Expert_Fitter_GetTypeString(g_fit_result.preliminary_type));
+            printf("2. Final Type (from analysis):  %s\r\n", Expert_Fitter_GetTypeString(g_fit_result.final_type));
+            
+            // Calculate f0 in Hz from w0 in rad/s for printing
+            double fitted_f0_hz = g_fit_result.params.w0 / (2.0 * M_PI);
+
+            printf("Fitted Parameters (double precision):\r\n");
+            // NOTE: Use "%f" or "%lf" for printing doubles, ensure printf float support is enabled in project settings.
+            printf("  k  (Gain)    : %.4f\r\n", g_fit_result.params.k);
+            printf("  f0 (Freq)    : %.2f Hz\r\n", fitted_f0_hz);
+            printf("  Q  (Q-Factor): %.4f\r\n", g_fit_result.params.q);
+            printf("  Final SSE    : %.6e\r\n", g_fit_result.sse);
             printf("========================================\r\n");
             g_system_state = STATE_DONE;
             break;
@@ -141,12 +168,21 @@ bool SysId_IsDone(void) {
     return g_system_state == STATE_DONE;
 }
 
-FilterParams_t SysId_GetFittedParams(void) {
-    return g_fitted_params;
+
+
+// This function needs to be updated to return the new double-precision struct
+FilterParams_t_double SysId_GetFittedParams(void) {
+    return g_fit_result.params;
 }
 
-FilterType_t SysId_GetFilterType(void) {
-    return g_identified_type;
+// Returns the type determined by the preliminary fitting process
+FilterType_t SysId_GetPreliminaryFilterType(void) {
+    return g_fit_result.preliminary_type;
+}
+
+// Returns the final, more robust type from feature analysis
+FilterType_t SysId_GetFinalFilterType(void) {
+    return g_fit_result.final_type;
 }
 
 // --- Callbacks to be called from ISRs ---
@@ -182,9 +218,11 @@ void SysId_ADCErrorCallback(void) {
 // --- Private Function Implementations ---
 
 static void process_fft_results(void) {
+
+    float current_corr = getCorrectCoe(g_measured_data[g_current_sweep_index].frequency_hz);
     float32_t dc_offset = 0.0f;
     for (int i = 0; i < ADC_BUFFER_SIZE; i++) {
-        g_fft_input_buf[i] = ((float32_t)g_adc_buf[i] * ADC_VREF) / ADC_MAX_VAL;
+        g_fft_input_buf[i] = ((float32_t)g_adc_buf[i] * ADC_VREF) / ADC_MAX_VAL / current_corr;
         dc_offset += g_fft_input_buf[i];
     }
     dc_offset /= ADC_BUFFER_SIZE;
@@ -192,10 +230,20 @@ static void process_fft_results(void) {
         g_fft_input_buf[i] -= dc_offset;
     }
 
+    // //校正:使用采样板
+    // for (int i = 0; i < ADC_BUFFER_SIZE; i++) {
+    //     g_fft_input_buf[i] = ADCSampleInputCorr(g_measured_data[g_current_sweep_index].frequency_hz, g_fft_input_buf[i]);
+    // }
+
+    //float current_corr = getCorrectCoe(g_measured_data[g_current_sweep_index].frequency_hz);
+    
+
+
+
     if (AccurateFFT_Measure(&g_fft_handle, g_fft_input_buf) != ARM_MATH_SUCCESS) {
          printf("  -> FFT Measurement Failed!\r\n");
     } else {
-        float current_gain = g_fft_handle.result.corrected_amplitude / (DAC_AMP_DEFAULT / 2.0f);
+        float current_gain = g_fft_handle.result.corrected_amplitude / (3.0f/2); // Scale to 3.0V
         if (isinf(current_gain) || isnan(current_gain)) {
             current_gain = 0.0f;
         }
@@ -217,72 +265,21 @@ static void process_fft_results(void) {
     }
 }
 
+
 static void identify_and_fit(void) {
-    // ... (This function remains unchanged) ...
-    float gain_low = g_measured_data[0].gain;
-    float gain_high = g_measured_data[SWEEP_POINTS - 1].gain;
-    float gain_max = 0;
-    float gain_min = FLT_MAX;
-    float freq_at_max = 0;
-    float freq_at_min = 0;
+    printf("Starting expert identification and fitting (double precision)...\r\n");
 
-    for (int i = 0; i < SWEEP_POINTS; i++) {
-        if (g_measured_data[i].gain > gain_max) {
-            gain_max = g_measured_data[i].gain;
-            freq_at_max = g_measured_data[i].frequency_hz;
-        }
-        if (g_measured_data[i].gain < gain_min) {
-            gain_min = g_measured_data[i].gain;
-            freq_at_min = g_measured_data[i].frequency_hz;
-        }
-    }
-
-    const float GAIN_RATIO_THRESHOLD = 0.85f;
-    int is_low_passband = (gain_low / gain_max) > GAIN_RATIO_THRESHOLD;
-    int is_high_passband = (gain_high / gain_max) > GAIN_RATIO_THRESHOLD;
-
-    if (is_low_passband && !is_high_passband)      g_identified_type = FILTER_TYPE_LPF;
-    else if (!is_low_passband && is_high_passband) g_identified_type = FILTER_TYPE_HPF;
-    else if (!is_low_passband && !is_high_passband)g_identified_type = FILTER_TYPE_BPF;
-    else if (is_low_passband && is_high_passband)  g_identified_type = FILTER_TYPE_BSF;
-    else                                           g_identified_type = FILTER_TYPE_UNKNOWN;
-
-    FilterParams_t initial_guess = {.k = 1.0f, .f0 = SWEEP_FREQ_START, .q = 0.707f};
-    switch (g_identified_type) {
-        case FILTER_TYPE_LPF:
-            initial_guess.k = gain_low;
-            for (int i = 0; i < SWEEP_POINTS; i++) { if (g_measured_data[i].gain <= gain_low / sqrtf(2.0f)) { initial_guess.f0 = g_measured_data[i].frequency_hz; break; } }
-            break;
-        case FILTER_TYPE_HPF:
-            initial_guess.k = gain_high;
-            for (int i = SWEEP_POINTS - 1; i >= 0; i--) { if (g_measured_data[i].gain <= gain_high / sqrtf(2.0f)) { initial_guess.f0 = g_measured_data[i].frequency_hz; break; } }
-            break;
-        case FILTER_TYPE_BPF:
-            initial_guess.k = gain_max;
-            initial_guess.f0 = freq_at_max;
-            float f_lower = 0, f_upper = 0;
-            float half_power_gain = gain_max / sqrtf(2.0f);
-            for (int i = 0; i < SWEEP_POINTS; i++) if (g_measured_data[i].gain >= half_power_gain) { f_lower = g_measured_data[i].frequency_hz; break; }
-            for (int i = SWEEP_POINTS - 1; i >= 0; i--) if (g_measured_data[i].gain >= half_power_gain) { f_upper = g_measured_data[i].frequency_hz; break; }
-            if (f_upper > f_lower) initial_guess.q = freq_at_max / (f_upper - f_lower);
-            break;
-        case FILTER_TYPE_BSF:
-            initial_guess.k = (gain_low + gain_high) / 2.0f;
-            initial_guess.f0 = freq_at_min;
-            initial_guess.q = 5.0f;
-            break;
-        default:
-            printf("Could not identify filter type!\r\n");
-            g_fitted_params = (FilterParams_t){0,0,0};
-            return;
-    }
-    printf("Initial Guess for %s -> k: %.3f, f0: %.1f Hz, Q: %.3f\r\n", get_filter_type_string(g_identified_type), initial_guess.k, initial_guess.f0, initial_guess.q);
-
-    g_fitted_params = initial_guess;
-    LM_Fit(g_measured_data, SWEEP_POINTS, g_identified_type, &g_fitted_params);
+    // Call the new, all-in-one expert fitter function.
+    // It takes the measured data and fills our global result struct.
+    Expert_Fitter_Run_Double(g_measured_data, SWEEP_POINTS, &g_fit_result);
+    
+    // The fitting is now complete. The results are in g_fit_result.
+    // The main state machine will handle printing them.
+    printf("Expert fitting process finished.\r\n");
 }
 
-static void generate_sine_table(float peak_voltage) {
+
+void generate_sine_table(float peak_voltage) {
     // ... (This function remains unchanged) ...
     uint16_t offset = DAC_MAX_VAL / 2;
     uint16_t amplitude = (uint16_t)((peak_voltage * DAC_MAX_VAL) / DAC_VREF);
@@ -294,7 +291,7 @@ static void generate_sine_table(float peak_voltage) {
     }
 }
 
-static void start_sine_output(float frequency) {
+void start_sine_output(float frequency) {
     uint32_t tim_clk = HAL_RCC_GetPCLK1Freq() * 2;
     uint32_t arr_val = (uint32_t)(tim_clk / (frequency * SINE_TABLE_SIZE)) - 1;
     __HAL_TIM_SET_AUTORELOAD(&htim6, arr_val);
@@ -302,7 +299,7 @@ static void start_sine_output(float frequency) {
     HAL_TIM_Base_Start(&htim6);
 }
 
-static void stop_sine_output() {
+void stop_sine_output() {
     HAL_TIM_Base_Stop(&htim6);
     HAL_DAC_Stop_DMA(&hdac, DAC_CHANNEL_1);
 }

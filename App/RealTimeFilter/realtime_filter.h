@@ -6,7 +6,7 @@
 #include <stdbool.h>
 
 #include "system_identification.h"
-#include "lm_fitter.h"
+#include "expert_fitter_double.h" // For ExpertFitResult_t_double
 #include "accurate_fft.h"
 #include "main.h"
 #include <stdio.h>
@@ -19,6 +19,9 @@
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
+
+
+
 
 /**
  * @brief Initializes the real-time IIR filter module.
@@ -54,6 +57,11 @@ void RealtimeFilter_ADCFullCpltCallback(void);
  * @brief ADC Error Callback for real-time mode.
  */
 void RealtimeFilter_ADCErrorCallback(void);
+
+
+void Correct_HSCorr_Init(void);
+
+uint16_t apply_hs_corr(uint16_t sample);
 
 
 #endif // REALTIME_FILTER_H

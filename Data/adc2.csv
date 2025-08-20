@@ -1,0 +1,5 @@
+Level,Expression,Value,Location,Refresh
+0,Waveform_RAM,,<outofscope>,Off
+0,g_adc_buf_dc,,<outofscope>,Off
+0,g_adc_buf,,0x20004900,Off
+0,g_fft_input_buf,,0x20005FBC,5 Hz

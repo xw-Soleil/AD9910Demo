@@ -24,10 +24,7 @@ extern float32_t __NUMERATOR;
 #define VOUT_STEP       0.1f
 #define VOUT_POINTS     11 // 11
 
-// --- 校准过程控制参数 ---
-#define MAX_ITERATIONS         10
-#define TARGET_PRECISION_V     0.005f
-#define STABILIZE_DELAY_MS     20
+
 
 
 /* ============================================================================ */

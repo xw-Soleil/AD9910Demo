@@ -213,3 +213,7 @@ void AD9910_AWG_Update_Freq_Phase(u32 freq_hz, u16 phase_degree) {
     write_reg(0x0E, RAM_Profile0_buf, 8);
     io_update();
 }
+
+void DDS_Stop(){
+    Init_AD9910(); // 重新初始化AD9910，停止所有输出
+}

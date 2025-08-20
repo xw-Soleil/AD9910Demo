@@ -1,0 +1,179 @@
+#include "lm_fitter.h"
+#include <string.h> // For memset
+#include <stdio.h>  // For printf
+#include <float.h>  // For FLT_MAX
+
+// Private function prototypes
+static float LM_Model_Function(const FilterParams_t* params, float w, FilterType_t type);
+static void LM_Calculate_Jacobian_Row_Numeric(const FilterParams_t* params, float w, FilterType_t type, float jacobian_row[LM_NUM_PARAMS]);
+static int LM_Solve_Linear_System_3x3(const float A[3][3], const float b[3], float x[3]);
+
+/**
+ * @brief The core model function that calculates theoretical gain based on parameters.
+ */
+static float LM_Model_Function(const FilterParams_t* params, float w, FilterType_t type) {
+    if (params->q <= 0 || params->f0 <= 0) return 0;
+
+    float w0 = 2.0f * (float)M_PI * params->f0;
+    float w_squared = w * w;
+    float w0_squared = w0 * w0;
+    float term1_sq_denom = w0_squared - w_squared;
+    float term2_sq_denom = w0 * w / params->q;
+
+    float denominator = sqrtf(term1_sq_denom * term1_sq_denom + term2_sq_denom * term2_sq_denom);
+    if (denominator < 1e-9f) return 0;
+
+    float numerator = 0.0f;
+    switch(type) {
+        case FILTER_TYPE_LPF: numerator = w0_squared; break;
+        case FILTER_TYPE_HPF: numerator = w_squared; break;
+        case FILTER_TYPE_BPF: numerator = term2_sq_denom; break;
+        case FILTER_TYPE_BSF: numerator = fabsf(term1_sq_denom); break;
+        default: return 0.0f;
+    }
+
+    return params->k * (numerator / denominator);
+}
+
+/**
+ * @brief Numerically calculates one row of the Jacobian matrix using central differences.
+ */
+static void LM_Calculate_Jacobian_Row_Numeric(const FilterParams_t* params, float w, FilterType_t type, float jacobian_row[LM_NUM_PARAMS]) {
+    FilterParams_t temp_params;
+    float model_plus_h, model_minus_h;
+    float two_h = 2.0f * LM_H_FOR_JACOBIAN;
+
+    // df/dk
+    temp_params = *params; temp_params.k += LM_H_FOR_JACOBIAN; model_plus_h = LM_Model_Function(&temp_params, w, type);
+    temp_params.k -= two_h; model_minus_h = LM_Model_Function(&temp_params, w, type);
+    jacobian_row[0] = (model_plus_h - model_minus_h) / two_h;
+
+    // df/df0
+    temp_params = *params; temp_params.f0 += LM_H_FOR_JACOBIAN; model_plus_h = LM_Model_Function(&temp_params, w, type);
+    temp_params.f0 -= two_h; model_minus_h = LM_Model_Function(&temp_params, w, type);
+    jacobian_row[1] = (model_plus_h - model_minus_h) / two_h;
+
+    // df/dq
+    temp_params = *params; temp_params.q += LM_H_FOR_JACOBIAN; model_plus_h = LM_Model_Function(&temp_params, w, type);
+    temp_params.q -= two_h; model_minus_h = LM_Model_Function(&temp_params, w, type);
+    jacobian_row[2] = (model_plus_h - model_minus_h) / two_h;
+}
+
+/**
+ * @brief Solves a 3x3 linear system Ax=b using Cramer's rule.
+ */
+static int LM_Solve_Linear_System_3x3(const float A[3][3], const float b[3], float x[3]) {
+    float detA = A[0][0]*(A[1][1]*A[2][2] - A[2][1]*A[1][2]) - A[0][1]*(A[1][0]*A[2][2] - A[1][2]*A[2][0]) + A[0][2]*(A[1][0]*A[2][1] - A[1][1]*A[2][0]);
+    if (fabsf(detA) < 1e-20f) return -1; // Singular matrix
+    float inv_detA = 1.0f / detA;
+    x[0] = ( (A[1][1]*A[2][2] - A[2][1]*A[1][2])*b[0] + (A[0][2]*A[2][1] - A[0][1]*A[2][2])*b[1] + (A[0][1]*A[1][2] - A[0][2]*A[1][1])*b[2] ) * inv_detA;
+    x[1] = ( (A[1][2]*A[2][0] - A[1][0]*A[2][2])*b[0] + (A[0][0]*A[2][2] - A[0][2]*A[2][0])*b[1] + (A[1][0]*A[0][2] - A[0][0]*A[1][2])*b[2] ) * inv_detA;
+    x[2] = ( (A[1][0]*A[2][1] - A[2][0]*A[1][1])*b[0] + (A[2][0]*A[0][1] - A[0][0]*A[2][1])*b[1] + (A[0][0]*A[1][1] - A[1][0]*A[0][1])*b[2] ) * inv_detA;
+    return 0;
+}
+
+/**
+ * @brief Main Levenberg-Marquardt fitting function.
+ */
+void LM_Fit(const MeasurementPoint_t* measured_data, int num_points, FilterType_t type, FilterParams_t* params) {
+    static float J[SWEEP_POINTS][LM_NUM_PARAMS];
+    static float r[SWEEP_POINTS];
+    static float JtJ[LM_NUM_PARAMS][LM_NUM_PARAMS];
+    static float JtJ_augmented[LM_NUM_PARAMS][LM_NUM_PARAMS];
+    static float Jtr[LM_NUM_PARAMS];
+    static float delta_p[LM_NUM_PARAMS];
+
+    FilterParams_t current_params = *params;
+    float lambda = LM_LAMBDA_INIT;
+
+    float current_sse = 0;
+    for (int i = 0; i < num_points; i++) {
+        float w = 2.0f * (float)M_PI * measured_data[i].frequency_hz;
+        float err = measured_data[i].gain - LM_Model_Function(&current_params, w, type);
+        current_sse += err * err;
+    }
+
+    printf("LM Initial SSE: %.6e\r\n", current_sse);
+    printf("------------------------------------------------------------------\r\n");
+    printf("Iter |      SSE      |     k     |    f0 (Hz)   |      Q      |  lambda  \r\n");
+    printf("------------------------------------------------------------------\r\n");
+
+    for (int iter = 0; iter < LM_MAX_ITERATIONS; iter++) {
+        // Calculate Jacobian and residual vector
+        for (int i = 0; i < num_points; i++) {
+            float w = 2.0f * (float)M_PI * measured_data[i].frequency_hz;
+            LM_Calculate_Jacobian_Row_Numeric(&current_params, w, type, J[i]);
+            r[i] = measured_data[i].gain - LM_Model_Function(&current_params, w, type);
+        }
+
+        // Calculate J^T * J and J^T * r
+        memset(JtJ, 0, sizeof(JtJ));
+        memset(Jtr, 0, sizeof(Jtr));
+        for (int i = 0; i < LM_NUM_PARAMS; i++) {
+            for (int j = 0; j < LM_NUM_PARAMS; j++) {
+                for (int k = 0; k < num_points; k++) { JtJ[i][j] += J[k][i] * J[k][j]; }
+            }
+            for (int k = 0; k < num_points; k++) { Jtr[i] += J[k][i] * r[k]; }
+        }
+
+        int solved = 0;
+        while (!solved) {
+            // Augment the diagonal: JtJ_augmented = JtJ + lambda * diag(JtJ)
+            for (int i = 0; i < LM_NUM_PARAMS; i++) {
+                for (int j = 0; j < LM_NUM_PARAMS; j++) { JtJ_augmented[i][j] = JtJ[i][j]; }
+                JtJ_augmented[i][i] += lambda * (JtJ[i][i] + 1e-6f);
+            }
+
+            // Solve for the parameter update step
+            if (LM_Solve_Linear_System_3x3(JtJ_augmented, Jtr, delta_p) == 0) {
+                FilterParams_t new_params = {
+                    .k = current_params.k + delta_p[0],
+                    .f0 = current_params.f0 + delta_p[1],
+                    .q = current_params.q + delta_p[2]
+                };
+
+                // Constrain parameters to be physically meaningful
+                if (new_params.k < 0) new_params.k = 1e-6f;
+                if (new_params.f0 < 1.0f) new_params.f0 = 1.0f;
+                if (new_params.q < 0.01f) new_params.q = 0.01f;
+
+                float new_sse = 0;
+                for (int i = 0; i < num_points; i++) {
+                    float w = 2.0f * (float)M_PI * measured_data[i].frequency_hz;
+                    float err = measured_data[i].gain - LM_Model_Function(&new_params, w, type);
+                    new_sse += err * err;
+                }
+
+                if (new_sse < current_sse) { // Good step, accept it
+                    current_params = new_params;
+                    current_sse = new_sse;
+                    lambda /= LM_LAMBDA_FACTOR_DOWN;
+                    solved = 1;
+                } else { // Bad step, reject it
+                    lambda *= LM_LAMBDA_FACTOR_UP;
+                }
+            } else { // Linear system solve failed
+                lambda *= LM_LAMBDA_FACTOR_UP;
+            }
+
+            if (lambda > 1e20f) {
+                printf("Error: Lambda too large, optimization failed.\r\n");
+                *params = current_params; // Return best params found so far
+                return;
+            }
+        }
+
+        if (iter % 10 == 0 || iter == LM_MAX_ITERATIONS - 1) {
+             printf("%4d | %13.6e | %9.4f | %12.1f | %11.4f | %.2e\r\n",
+                   iter, current_sse, current_params.k, current_params.f0, current_params.q, lambda);
+        }
+
+        // Check for convergence
+        float delta_norm_sq = delta_p[0]*delta_p[0] + delta_p[1]*delta_p[1] + delta_p[2]*delta_p[2];
+        if (delta_norm_sq < LM_STOP_THRESHOLD * LM_STOP_THRESHOLD) {
+            printf("\nConvergence reached: Parameter change below threshold.\r\n");
+            break;
+        }
+    }
+    *params = current_params; // Store final result
+}

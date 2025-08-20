@@ -34,6 +34,7 @@
 #include "sample.h"
 #include "hmi.h"
 #include "Correct.h"
+#include "screen.h"
 
 
 #include "app_config.h"
@@ -49,6 +50,7 @@ typedef enum {
     APP_MODE_IDENTIFICATION,
     APP_MODE_FILTERING
 } AppMode_t;
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -78,20 +80,27 @@ void SystemClock_Config(void);
 
 
 //======================================================================================
-// 全局变量
+// ??????
 //======================================================================================
-AccurateFFT_Handle fft_handle;      // FFT模块的句柄
-float32_t test_input_signal[FFT_SIZE]; // 输入信号缓冲区
-float32_t test_input_signal2[FFT_SIZE * 2]; // 输入信号缓冲区
+AccurateFFT_Handle fft_handle;      // FFT??????
+float32_t test_input_signal[FFT_SIZE]; // ????????????
+float32_t test_input_signal2[FFT_SIZE * 2]; // ????????????
 
 
 volatile AppMode_t g_app_mode = APP_MODE_IDENTIFICATION;
+volatile SysMode_t sys_mode = SYS_BASIC_OUTPUT; // ????
 
 //======================================================================================
-// 函数声明
+// ????????
 //======================================================================================
 void generate_test_signal(float32_t* p_buffer, uint16_t size);
 void ProcessADCData();
+
+
+void set2to1Mode(uint8_t sel) {
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, sel ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -134,14 +143,24 @@ int main(void)
   MX_TIM6_Init();
   MX_ADC3_Init();
   /* USER CODE BEGIN 2 */
-  // HAL_Delay(100); // 确保所有外设初始化完成
-  // VisualTFT_Init(); // 初始化串口屏
-  // Init_AD9910(); // 初始化AD9910
+  // HAL_Delay(100); // ??????????????????
+  VisualTFT_Init(); // ???????????
+  Init_AD9910(); // ?????AD9910
+//   AD9910_Set_Sine_Wave(1000, 16383 * 1.0f / MAX_DDS_VPP);
+//   DDSOutputCorrSamInBord(1000, 2.0f);
+//   dacSampleBoardCorr();
+//   dacSampleBoardError();
+  
+//   SampleInBoardCorr();
+//   SampleInBoardError();
+//   SampleDDSBoardCorr();
+//   SampleDDSBoardCorrError();
   // float32_t vpp = MeasureAdcInputVpp();
   // float32_t vppCorr = ADCSampleInputCorr(100, vpp);
 
   // vpp = MeasureAdcInputVpp();
   // vppCorr = ADCSampleInputCorr(300, vpp);
+
 
   // vpp = MeasureAdcInputVpp();
   // vppCorr = ADCSampleInputCorr(3000, vpp);
@@ -159,55 +178,135 @@ int main(void)
 
   // SweepKnownBoardHs();
   // Init_AD9910();
-  // AD9910_Set_Sine_Wave(1000, 16383 * 1.0f / MAX_DDS_VPP); // 设置正弦波频率为100kHz，幅度为16383（对应3.3V）
-  // HAL_Delay(100); // 确保所有外设初始化完成
+  // AD9910_Set_Sine_Wave(1000, 16383 * 1.0f / MAX_DDS_VPP); // ?????????????100kHz???????16383?????3.3V??
+  // HAL_Delay(100); // ??????????????????
   // float32_t vpp = MeasureAdcInputVpp();
 
   // --- STAGE 1: SYSTEM IDENTIFICATION ---
-  g_app_mode = APP_MODE_IDENTIFICATION;
-  SysId_Init();
-
-  while (!SysId_IsDone())
-  {
-    // The state machine is driven by interrupts and this loop
-    SysId_RunStateMachine();
-  }
-
-  // --- STAGE 2: REAL-TIME FILTERING ---
-  printf("\nSwitching to Real-Time Filter Mode...\n");
-  g_app_mode = APP_MODE_FILTERING;
-
-  // 1. Get the results from the identification stage
-  FilterParams_t fitted_params = SysId_GetFittedParams();
-  FilterType_t filter_type = SysId_GetFilterType();
-
-  // 2. Design the IIR filter using the identified parameters
-  BiquadCoeffs iir_coeffs;
-  // Note: The FilterType_t enum in iir_filter_design.h must match the one in app_config.h
-  design_biquad_filter(
-      (FilterType_t)filter_type, // Cast might be needed if enums differ
-      fitted_params.k,
-      fitted_params.f0,
-      fitted_params.q,
-      REALTIME_SAMPLING_RATE,
-      &iir_coeffs
-  );
-
-  // 3. Initialize and start the real-time filter module
-  RealtimeFilter_Init(&iir_coeffs);
-  RealtimeFilter_Start();
+  
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  static SysMode_t previous_sys_mode = SYS_WAITING; // ?????????????????????
+  static int filter_initialized = 0; // ????????????? initialized ???
+
   while (1)
   {
-    // VisualTFT_Poll();
-    // HAL_Delay(100); // 确保所有外设初始化完成
+    VisualTFT_Poll();
+    
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    // ==============================================================================
+    // ?????????????????
+    // ==============================================================================
+    // ???????????????????????????????
+    if (sys_mode != previous_sys_mode)
+    {
+        // --- a. ?????????????????? ---
+        if (previous_sys_mode == SYS_PERFORMANCE_OUTPUT)
+        {
+            RealtimeFilter_Stop(); // ???????OUTPUT???????
+            filter_initialized = 0; // ?????????????????
+            printf("Stopped Real-time Filter.\n");
+            SendText(4, 4, "");
+        }
+
+        // --- b. ????????????????? ---
+        switch (sys_mode)
+        {
+            case SYS_PERFORMANCE_LEARN:
+                set2to1Mode(0);
+                g_app_mode = APP_MODE_IDENTIFICATION;
+                SysId_Init(); // ??????LEARN???????????
+                printf("Entering LEARN mode, SysId initialized.\n");
+                break;
+
+            case SYS_PERFORMANCE_LEARN_DONE:
+                
+                FilterType_t filter_type = SysId_GetFinalFilterType(); // ?????????????????
+                if(filter_type == FILTER_TYPE_LPF) {
+                    SendText(4, 4, "��ͨ�˲���");
+                }
+                else if(filter_type == FILTER_TYPE_HPF) {
+                    SendText(4, 4, "��ͨ�˲���");
+                }
+                else if(filter_type == FILTER_TYPE_BPF) {
+                    SendText(4, 4, "��ͨ�˲���");
+                }
+                else if(filter_type == FILTER_TYPE_BSF) {
+                    SendText(4, 4, "�����˲���");
+                }
+                else {
+                    SendText(4, 4, "");
+                }
+                break;
+            case SYS_PERFORMANCE_OUTPUT:
+                set2to1Mode(1);
+                if (!filter_initialized) // ????????????
+                {
+                    printf("Entering OUTPUT mode, configuring filter...\n");
+                    g_app_mode = APP_MODE_FILTERING;
+                    
+                    FilterParams_t_double fitted_params = SysId_GetFittedParams();
+                    // FilterParams_t_double fitted_params;
+                    // fitted_params.k = 0.9688;
+                    // fitted_params.w0 = 2*PI * 20.83; // 20.83 Hz
+                    // fitted_params.q = 0.0010;
+                    // FilterType_t filter_type = FILTER_TYPE_BPF;
+                    FilterType_t filter_type = SysId_GetPreliminaryFilterType(); // ????
+                    BiquadCoeffs iir_coeffs;
+
+                    design_biquad_filter(
+                        (FilterType_t)filter_type,
+                        fitted_params.k, fitted_params.w0 / 2 / PI, fitted_params.q,
+                        REALTIME_SAMPLING_RATE, &iir_coeffs);
+
+                    RealtimeFilter_Init(&iir_coeffs);
+                    RealtimeFilter_Start();
+                    filter_initialized = 1;
+                    printf("Filter configured and started.\n");
+
+                }
+                break;
+            
+            // ????????????????????
+            case SYS_BASIC_OUTPUT:
+
+            case SYS_BASIC_HS_OUTPUT:
+                // ...
+                break;
+            default:
+                // ?????????????????
+                break;
+        }
+
+        // --- c. ??????????????????? ---
+        previous_sys_mode = sys_mode;
+    }
+
+
+    // ==============================================================================
+    // ?????????????????????????????????
+    // ==============================================================================
+    if (sys_mode == SYS_PERFORMANCE_LEARN)
+    {
+        // ????????????????????????while?????????
+        // ??????????????????????????????????
+        if (!SysId_IsDone())
+        {
+            SysId_RunStateMachine();
+        }
+        else
+        {
+            // ?????????????????????????
+            printf("\nSystem Identification complete!\n");
+            sys_mode = SYS_PERFORMANCE_LEARN_DONE; // ????????????????
+        }
+    }
+    
   }
   /* USER CODE END 3 */
 }
@@ -235,7 +334,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = 8;
-  RCC_OscInitStruct.PLL.PLLN = 160;
+  RCC_OscInitStruct.PLL.PLLN = 168;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -261,15 +360,15 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void ProcessADCData(){
   for(int i = 0; i < ADC_DMA_BUFFER_SIZE; i++) {
-      // 将ADC1和ADC2的采样数据转换为浮点数
-      test_input_signal[i] = 3.3f * (float32_t)(ADC1_Buffer[i]) / 4095.0f; // 假设ADC分辨率为12位，参考电压为3.3V
+      // ??ADC1??ADC2???????????????????
+      test_input_signal[i] = 3.3f * (float32_t)(ADC1_Buffer[i]) / 4095.0f; // ????ADC??????12????????????3.3V
   }
 
-  // 使用Arm数学库进行去除直流偏置
+  // ???Arm?????????????????
   float32_t mean_value;
   arm_mean_f32(test_input_signal, ADC_DMA_BUFFER_SIZE, &mean_value);
   for(int i = 0; i < ADC_DMA_BUFFER_SIZE; i++) {
-      test_input_signal[i] -= mean_value; // 去除直流偏置
+      test_input_signal[i] -= mean_value; // ?????????
   }
 }
 void generate_test_signal(float32_t* p_buffer, uint16_t size)
@@ -290,6 +389,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
     } else { // APP_MODE_FILTERING
         RealtimeFilter_ADCFullCpltCallback();
     }
+    adc_status = ADC_FINISHED;
 }
 
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
@@ -302,7 +402,7 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
 
 void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc) {
     if (g_app_mode == APP_MODE_IDENTIFICATION) {
-        SysId_ADCErrorCallback(); // <--- 添加这一行
+        SysId_ADCErrorCallback(); // <--- ?????????
     } else if (g_app_mode == APP_MODE_FILTERING) {
         RealtimeFilter_ADCErrorCallback();
     }

@@ -1,9 +1,25 @@
 #include "realtime_filter.h"
 #include "main.h" // For HAL handles
+#include <stdint.h>
+
+
+
+
+#define USE_LINEAR
+#ifdef USE_LINEAR
+#define CORRECT  (1.7758f)
+#else
+#define CORRECT 1
+#endif
+
 
 // --- DMA Buffers ---
 static uint16_t adc_dma_buffer[PING_PONG_SIZE];
 static uint16_t dac_dma_buffer[PING_PONG_SIZE];
+
+
+extern BiquadCoeffs iir_coeffs_corr; // Coefficients for the IIR filter
+
 
 // --- IIR Filter State Variables ---
 #if USE_FLOAT_IIR
@@ -115,7 +131,7 @@ static uint16_t process_sample(uint16_t sample) {
     y_n2 = y_n1; y_n1 = y_n0;
     
     // Add DC offset back and clamp the output
-    float dac_output = y_n0 + (float)DC_OFFSET;
+    float dac_output = y_n0 * CORRECT + (float)DC_OFFSET;
     if (dac_output < 0.0f) dac_output = 0.0f;
     if (dac_output > 4095.0f) dac_output = 4095.0f;
     
@@ -147,14 +163,14 @@ static uint16_t process_sample(uint16_t sample) {
 void RealtimeFilter_ADCHalfCpltCallback(void) {
     // Process the first half of the buffer (Ping)
     for (int i = 0; i < REALTIME_BUFFER_SIZE; i++) {
-        dac_dma_buffer[i] = process_sample(adc_dma_buffer[i]);
+        dac_dma_buffer[i] = process_sample(apply_hs_corr(adc_dma_buffer[i]));
     }
 }
 
 void RealtimeFilter_ADCFullCpltCallback(void) {
     // Process the second half of the buffer (Pong)
     for (int i = 0; i < REALTIME_BUFFER_SIZE; i++) {
-        dac_dma_buffer[REALTIME_BUFFER_SIZE + i] = process_sample(adc_dma_buffer[REALTIME_BUFFER_SIZE + i]);
+        dac_dma_buffer[REALTIME_BUFFER_SIZE + i] = process_sample(apply_hs_corr(adc_dma_buffer[REALTIME_BUFFER_SIZE + i]));
     }
 }
 
@@ -165,3 +181,51 @@ void RealtimeFilter_ADCErrorCallback(void) {
         HAL_ADC_Start_DMA(&adciir, (uint32_t*)adc_dma_buffer, PING_PONG_SIZE);
     }
 }
+
+
+
+static float cb0, cb1, cb2, ca1, ca2;
+static float cx_n1 = 0.0f, cx_n2 = 0.0f;
+static float cy_n1 = 0.0f, cy_n2 = 0.0f;
+
+
+void Correct_HSCorr_Init(void) {
+    // Initialize the filter coefficients
+    
+
+    cb0 = (float)iir_coeffs_corr.b0;
+    cb1 = (float)iir_coeffs_corr.b1;
+    cb2 = (float)iir_coeffs_corr.b2;
+    ca1 = (float)iir_coeffs_corr.a1;
+    ca2 = (float)iir_coeffs_corr.a2;
+    cx_n1 = cx_n2 = 0.0f;
+    cy_n1 = cy_n2 = 0.0f;
+}
+
+//#define USE_HS
+#ifdef USE_HS
+uint16_t apply_hs_corr(uint16_t sample) {
+    float cx_n0 = (float)sample - (float)DC_OFFSET;
+
+    float cy_n0 = cb0 * cx_n0 + cb1 * cx_n1 + cb2 * cx_n2 - ca1 * cy_n1 - ca2 * cy_n2;
+    
+    // Update state variables
+    cx_n2 = cx_n1; cx_n1 = cx_n0;
+    cy_n2 = cy_n1; cy_n1 = cy_n0;
+    
+    // Add DC offset back and clamp the output
+    float dac_output = cy_n0 + (float)DC_OFFSET;
+    if (dac_output < 0.0f) dac_output = 0.0f;
+    if (dac_output > 4095.0f) dac_output = 4095.0f;
+    
+    return (uint16_t)dac_output;
+}
+
+#else
+uint16_t apply_hs_corr(uint16_t sample) {
+    // No correction applied, just return the sample
+    return sample;
+}
+#endif // USE_HS
+
+
